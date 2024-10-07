@@ -1,0 +1,73 @@
+
+  Manifesto do Arquivo .SPICE
+  
+  O que é um arquivo .SPICE?
+  ---------------------------
+  Um arquivo .spice é um formato customizado desenvolvido para facilitar a exibição de imagens seriadas em uma 
+  plataforma web, multiplataforma, sem a necessidade de plugins ou extensões adicionais. 
+  Imagens seriadas são uma série de imagens que representam alterações temporais ou dimensionais de um objeto ou 
+  fenômeno, e são comumente utilizadas em áreas como medicina, geociências, astronomia, entre outras. 
+  Seus usos incluem a visualização de mapas de profundiade, imagens de ressonância magnética, 
+  tomografias computadorizadas, imagens de satélite em diferentes datas e etc.
+  O nome "SPICE" é um acrônimo para "Serialized Picture Interactive Content Environment". 
+  Este formato permite a integração de texto, imagens e outros elementos multimídia em um único arquivo HTML, 
+  que pode ser facilmente visualizado em navegadores modernos.
+
+  
+  Uso e Aplicação
+  ----------------
+  O arquivo .SPICE pode ser principalmente para criar apresentações interativas em uma variedade de campos, 
+  especialmente aqueles que exigem a exibição de imagens seriadas. Exemplos notáveis incluem:
+  
+  - Geociências: Visualização de mapas de concentração de minérios em uma mina em diferentes profundidades, permitindo 
+    a análise de variações geológicas e a eficiência de extração. Imagens em timelapse podem mostrar a evolução de uma 
+    cidade ao longo do tempo, permitindo observar o crescimento urbano e as mudanças na infraestrutura.
+  
+  - Medicina: Imagens de ressonância magnética em diferentes camadas (ou profundidades) do corpo humano podem ser 
+    apresentadas para auxiliar na análise de condições médicas, permitindo aos profissionais de saúde observar detalhes 
+    críticos em múltiplas perspectivas.
+  
+  - Agronomia: Acompanhamento de índices vegetativos de uma lavoura em diferentes datas para monitorar a saúde das 
+    plantas, permitindo que agricultores e agrônomos analisem o desenvolvimento das culturas e a eficácia das práticas 
+    agrícolas.
+  
+  - Educação: Professores e instrutores podem desenvolver tutoriais interativos com imagens e descrições detalhadas, 
+    facilitando o aprendizado de conceitos complexos.
+  
+  - Portfólios de artistas: Artistas têm a oportunidade de exibir suas obras em galerias interativas, promovendo uma 
+    experiência visual imersiva.
+  
+  - Documentação técnica: Engenheiros e desenvolvedores podem criar documentação visual para explicar processos 
+    complexos de forma clara e didática.
+  
+  O formato .SPICE é gerado automaticamente e otimizado para ser compatível com a maioria das plataformas, tanto em 
+  dispositivos móveis quanto em desktops, a partir de navegadores web. Essa versatilidade torna o arquivo .SPICE uma 
+  ferramenta poderosa e acessível para a apresentação de informações visuais. O desenvolvimento e a manutenção deste 
+  formato são realizados pela comunidade do projeto TSIMG, que se dedica a aprimorar continuamente a experiência de 
+  visualização de imagens na web.
+ 
+  Exemplo de Uso
+  ---------------
+  Imagine que você precisa apresentar uma série de imagens que documentam a evolução de um fenômeno ao longo do tempo, 
+  como a evolução de uma cidade em diferentes datas ou a mudança em índices vegetativos de uma lavoura. Ao invés de 
+  fornecer múltiplos arquivos separados, que podem ser difíceis de manipular e não oferecem clareza sobre em qual 
+  camada de informação o usuário se encontra ou como os dados estão progredindo, você pode usar o script fornecido 
+  para gerar um arquivo .SPICE. Este arquivo embute todas as imagens e suas descrições em um único documento HTML 
+  interativo, permitindo uma análise multicamadas de maneira organizada e acessível.
+  
+  O usuário final poderá abrir este arquivo em qualquer navegador moderno e utilizar um controle deslizante para 
+  navegar pelas imagens de forma intuitiva, lendo as descrições associadas enquanto observa a transição entre as 
+  diferentes camadas de informação. O resultado é um arquivo .SPICE profissional, com formatação customizada que 
+  agrega valor ao seu trabalho, facilitando a exibição e a transmissão de dados de maneira clara e eficaz.
+  
+  Conclusão
+  ----------
+  O formato .SPICE representa uma solução poderosa e flexível para a exibição de conteúdo multimídia seriado. Sua 
+  capacidade de integrar texto, imagens e outros elementos interativos em um único arquivo HTML torna-o uma ferramenta 
+  muito útil na apresentação de informações visuais. Além da facilidade de criação, o .SPICE é otimizado para ser 
+  compatível com uma ampla gama de plataformas, tanto em dispositivos móveis quanto em desktops, garantindo acessibilidade 
+  a todos os usuários.
+  
+  Essa versatilidade faz do formato .SPICE uma escolha valiosa para educadores, artistas, engenheiros,
+  e qualquer pessoa que precise comunicar informações seriadas de maneira clara e interativa.
+ 
