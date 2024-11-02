@@ -1,4 +1,4 @@
-# TSIMG - Time Series Image Generator <img src="doc/logo/tsimg.png" align="right" height="120/"/>
+# TSIMG <img src="doc/logo/tsimg.png" align="right" height="120/"/>
 
 ![NEPEMVERSE](https://img.shields.io/endpoint?url=https://nepemufsc.com/.netlify/functions/verser?project=tsimg-stamp&label=LatestVersion:&labelColor=5288ce&logo=nepemverse&logoColor=white&style=metallic&color=#9e2621&cacheSeconds=3600)
 
