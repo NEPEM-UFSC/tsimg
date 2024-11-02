@@ -13,6 +13,12 @@ _deps
 CMakeUserPresets.json
 /build
 /.vscode
+/utils
+/example
+/dist
+.hintrc
+
+compile.txt
 
 # Ignorar arquivos de configuração do Visual Studio Code
 .vscode/
