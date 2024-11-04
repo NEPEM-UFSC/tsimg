@@ -77,17 +77,35 @@ int main(int argc, char* argv[]) {
 
     if (!json_config_file.empty()) {
         try {
+            // Lê o arquivo JSON de configuração
             nlohmann::json config = read_json_file(json_config_file, debug);
+            
+            // Extrai valores do JSON, usando valores padrão se as chaves não estiverem presentes
             format = config.value("export_format", "spice");
             output_filename = config.value("output_filename", "output.html");
             image_paths = config.value("images", std::vector<std::string>{});
             labels = config.value("labels", std::vector<std::string>{});
             std::string title = config.value("title", "SPICE Presentation");
-
-            if (format == "spice") {
-                int slider_timing = config.value("slider_timing", 1500);
+            std::string help_text = config.value("help_text", "Mais informações disponíveis no botão abaixo.");
+            std::string help_link = config.value("help_link", "https://github.com/NEPEM-UFSC/tsimg");
+            std::string help_badge_url = config.value("help_badge_url", "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGNsYXNzPSJsdWNpZGUgbHVjaWRlLWNpcmNsZS1oZWxwIj48Y2lyY2xlIGN4PSIxMiIgY3k9IjEyIiByPSIxMCIvPjxwYXRoIGQ9Ik05LjA5IDlhMyAzIDAgMCAxIDUuODMgMWMwIDItMyAzLTMgMyIvPjxwYXRoIGQ9Ik0xMiAxN2guMDEiLz48L3N2Zz4=");
+            std::string author_image = config.value("author_image", "");
+            std::string main_text = config.value("main_text", "This is generated from a JSON config.");
+    
+            // Verifica o formato de exportação
+            if (format == "gif") {
+                // Cria um arquivo GIF
+                if (!createGif(output_filename, image_paths, debug)) {
+                    std::cerr << "Failed to create GIF file: " << output_filename << std::endl;
+                    return 1;
+                }
+            } else if (format == "mp4") {
+                // Cria um arquivo MP4
+                std::cout << "MP4 created: " << output_filename << std::endl;
+            } else if (format == "spice") {
+                // Cria um objeto SPICE e adiciona conteúdo, imagens, rótulos e configurações de ajuda
                 SPICE spice(title, debug);
-                spice.addContent("SPICE_TEXT", "This is generated from a JSON config.", debug);
+                spice.addContent("SPICE_TEXT", main_text, debug);
                 spice.addContent("SPICE_TITLE", title, debug);
                 for (const auto& img : image_paths) {
                     spice.addImage(img, debug);
@@ -96,21 +114,16 @@ int main(int argc, char* argv[]) {
                     spice.generateLabelsFromImages(debug);
                 }
                 spice.addLabels(labels, debug);
-                spice.setHelp(help_text, helpLink, helpBadgeURL, debug);
-                spice.generateSPICEFileFromTemplate("template.html", output_filename, debug);
-            }
-            else if (format == "gif") {
-                if (!createGif(output_filename, image_paths, debug)) {
-                    std::cerr << "Failed to create GIF file: " << output_filename << std::endl;
-                    return 1;
+                spice.setHelp(help_text, help_link, help_badge_url, debug);
+                if (!author_image.empty()) {
+                    spice.setAuthorImage(author_image, debug);
                 }
-            } else if (format == "mp4") {
-                std::cout << "MP4 created: " << output_filename << std::endl;
+                // Gera o arquivo SPICE a partir do template HTML
+                spice.generateSPICEFileFromTemplate("template.html", output_filename, debug);
             } else {
                 std::cerr << "Unsupported format in JSON config: " << format << std::endl;
                 return 1;
             }
-
         } catch (const std::exception& e) {
             std::cerr << "Error reading or processing JSON config file: " << e.what() << std::endl;
             return 1;
@@ -154,6 +167,5 @@ int main(int argc, char* argv[]) {
             return 1;
         }
     }
-
     return 0;
 }
