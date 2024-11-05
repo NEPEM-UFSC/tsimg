@@ -46,6 +46,24 @@ std::string help_text = "Mais informações disponíveis no botão abaixo.";
 std::string helpBadgeURL = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGNsYXNzPSJsdWNpZGUgbHVjaWRlLWNpcmNsZS1oZWxwIj48Y2lyY2xlIGN4PSIxMiIgY3k9IjEyIiByPSIxMCIvPjxwYXRoIGQ9Ik05LjA5IDlhMyAzIDAgMCAxIDUuODMgMWMwIDItMyAzLTMgMyIvPjxwYXRoIGQ9Ik0xMiAxN2guMDEiLz48L3N2Zz4=";
 std::string helpLink = "https://github.com/NEPEM-UFSC/tsimg";
 
+void display_info() {
+    std::cout << "===================================================\n" << std::endl;
+    std::cout << " /$$$$$$$$  /$$$$$$  /$$$$$$ /$$      /$$  /$$$$$$ " << std::endl;
+    std::cout << "|__  $$__/ /$$__  $$|_  $$_/| $$$    /$$$ /$$__  $$" << std::endl;
+    std::cout << "   | $$   | $$  \\__/  | $$  | $$$$  /$$$$| $$  \\__/" << std::endl;
+    std::cout << "   | $$   |  $$$$$$   | $$  | $$ $$/$$ $$| $$ /$$$$" << std::endl;
+    std::cout << "   | $$    \\____  $$  | $$  | $$  $$$| $$| $$|_  $$" << std::endl;
+    std::cout << "   | $$    /$$  \\ $$  | $$  | $$\\  $ | $$| $$  \\ $$" << std::endl;
+    std::cout << "   | $$   |  $$$$$$/ /$$$$$$| $$ \\/  | $$|  $$$$$$/" << std::endl;
+    std::cout << "   |__/    \\______/ |______/|__/     |__/ \\______/ " << std::endl;
+    std::cout << "\n===================================================" << std::endl;
+    std::cout << "  Temporal Series Interactive Imager (TSIMG)       " << std::endl;
+    std::cout << "===================================================" << std::endl;
+    std::cout << "\nA tool for creating interactive images of time series." << std::endl;
+    std::cout << "Supports export to SPICE and GIF formats." << std::endl;
+    std::cout << "For more information, please visit: \nhttps://github.com/NEPEM-UFSC/tsimg" << std::endl;
+    std::cout << "\n===================================================\n" << std::endl;
+}
 int main(int argc, char* argv[]) {
     std::string output_filename;
     std::vector<std::string> image_paths;
@@ -56,8 +74,26 @@ int main(int argc, char* argv[]) {
     std::string json_config_file;
     std::string author_image_path;
 
+    if (argc == 1) {
+        display_info();
+        std::cerr << "Usage: create_file -n <output_filename> -i <image1.jpg,image2.png,...> [-l <label1,label2,...>] [-f <format>] [-debug] [-config <config.json>]" << std::endl;
+        std::cerr << "Options:" << std::endl;
+        std::cerr << "  -n <output_filename>    Specify the output filename." << std::endl;
+        std::cerr << "  -i <image_paths>        Comma-separated list of image paths." << std::endl;
+        std::cerr << "  -l <labels>             Comma-separated list of labels (optional)." << std::endl;
+        std::cerr << "  -f <format>             Output format: 'spice' or 'gif' (default: 'spice')." << std::endl;
+        std::cerr << "  -debug                  Enable debug mode (optional)." << std::endl;
+        std::cerr << "  --config <config.json>   Path to JSON config file (optional)." << std::endl;
+        std::cerr << "  --labelbyname           Generate labels from image names (optional)." << std::endl;
+        std::cerr << "  -author_image <author_image_path>   Path to author image (optional)." << std::endl;
+        return 1;
+    }
+
     for (int i = 1; i < argc; ++i) {
-        if (std::strcmp(argv[i], "-n") == 0 && i + 1 < argc) {
+        if (std::strcmp(argv[i], "-info") == 0) {
+            display_info();
+            return 0;
+        } else if (std::strcmp(argv[i], "-n") == 0 && i + 1 < argc) {
             output_filename = argv[++i];
         } else if (std::strcmp(argv[i], "-i") == 0 && i + 1 < argc) {
             image_paths = split(argv[++i], ',');
@@ -135,7 +171,7 @@ int main(int argc, char* argv[]) {
             std::cerr << "  -n <output_filename>    Specify the output filename." << std::endl;
             std::cerr << "  -i <image_paths>        Comma-separated list of image paths." << std::endl;
             std::cerr << "  -l <labels>             Comma-separated list of labels (optional)." << std::endl;
-            std::cerr << "  -f <format>             Output format: 'spice', 'gif', or 'mp4' (default: 'spice')." << std::endl;
+            std::cerr << "  -f <format>             Output format: 'spice' or 'gif' (default: 'spice')." << std::endl;
             std::cerr << "  -debug                  Enable debug mode (optional)." << std::endl;
             std::cerr << "  --config <config.json>   Path to JSON config file (optional)." << std::endl;
             std::cerr << "  --labelbyname           Generate labels from image names (optional)." << std::endl;
@@ -164,9 +200,6 @@ int main(int argc, char* argv[]) {
                 std::cerr << "Falha ao criar o arquivo GIF: " << output_filename << std::endl;
                 return 1;
             }
-        } else if (format == "mp4") {
-            std::cout << "MP4 created: " << output_filename << std::endl;
-            return 0;
         } else {
             std::cerr << "Unsupported format: " << format << std::endl;
             return 1;
