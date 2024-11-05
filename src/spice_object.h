@@ -4,27 +4,77 @@
 #include <vector>
 #include <map>
 
-class SPICE {
+class Image {
 public:
-    SPICE(const std::string& title = "", bool debug = false);
-    void addImage(const std::string& imagePath, bool debug = false);
-    void addContent(const std::string& tag, const std::string& content, bool debug = false);
-    void addLabels(const std::vector<std::string>& labelList, bool debug = false);
-    void generateSPICEFileFromTemplate(const std::string& templateFile, const std::string& outputFile, bool debug = false);
-    void generateLabelsFromImages(bool debug = false);
-    void setAuthorImage(const std::string& imagePath, bool debug = false);
-    void setHelp(const std::string& helpText, const std::string& helpLink, const std::string& helpBadgeURL, bool debug = false);
+    Image(const std::string& path, const std::string& base64);
+    std::string getPath() const;
+    std::string getBase64() const;
+
+private:
+    std::string path;
+    std::string base64;
+};
+
+class ImageList {
+public:
+    void addImage(const Image& image);
+    std::vector<Image> getImages() const;
+    std::string generateImageTags() const;
+
+private:
+    std::vector<Image> images;
+};
+
+class SpiceContent {
+public:
+    SpiceContent(const std::string& tag, const std::string& baseHtml, const std::string& variableContent);
+    std::string getTag() const;
+    std::string getBaseHtml() const;
+    std::string getVariableContent() const;
+
+private:
+    std::string tag;
+    std::string baseHtml;
+    std::string variableContent;
+};
+
+class SPICEBuilder {
+public:
+    SPICEBuilder(const std::string& title = "", bool debug = false);
+    SPICEBuilder& addImage(const std::string& imagePath);
+    SPICEBuilder& addContent(const std::string& tag, const std::string& content);
+    SPICEBuilder& addLabels(const std::vector<std::string>& labelList);
+    SPICEBuilder& generateLabelsFromImages();
+    SPICEBuilder& setAuthorImage(const std::string& imagePath);
+    SPICEBuilder& setHelp(const std::string& helpText, const std::string& helpLink, const std::string& helpBadgeURL);
+    SPICEBuilder& addTitle(const std::string& title);
+
+    const std::vector<SpiceContent>& getContents() const;
+    const ImageList& getImageList() const;
+    const std::vector<std::string>& getLabels() const;
+    const std::string& getAuthorImageBase64() const;
 
 private:
     std::string title;
-    std::vector<std::string> base64Images;
-    std::string sliderControls;
-    std::vector<std::string> contentElements;
+    bool debug;
+    ImageList imageList;
+    std::vector<SpiceContent> contents;
     std::vector<std::string> labels;
-    std::map<std::string, std::string> contentMap;
+    std::string authorImageBase64;
+};
+
+class SPICE {
+public:
+    SPICE(const std::string& title = "", bool debug = false);
+    void generateSPICEFileFromTemplate(const std::string& templateFile, const std::string& outputFile, bool debug = false);
+
+private:
+    std::string title;
+    ImageList imageList;
+    std::vector<SpiceContent> contents;
+    std::vector<std::string> labels;
     std::string authorImageBase64;
 
-    std::string generateImageTags();
     std::string generateLabelTags();
 };
 
