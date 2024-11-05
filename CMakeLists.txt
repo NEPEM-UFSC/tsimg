@@ -19,6 +19,7 @@ set(SOURCES
     src/tsimg.cpp
     src/spice_constructor.cpp
     src/image_utils.cpp
+    src/template_writer.cpp
 )
 
 add_executable(tsimg ${SOURCES})
