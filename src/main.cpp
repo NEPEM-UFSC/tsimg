@@ -9,6 +9,7 @@
 #include "tsimg.h"
 #include "image_utils.h"
 #include "spice_object.h"
+#include "template_writer.h"
 
 std::vector<std::string> split(const std::string& str, char delimiter) {
     std::vector<std::string> tokens;
@@ -99,27 +100,26 @@ int main(int argc, char* argv[]) {
                     std::cerr << "Failed to create GIF file: " << output_filename << std::endl;
                     return 1;
                 }
-            } else if (format == "mp4") {
-                // Cria um arquivo MP4
-                std::cout << "MP4 created: " << output_filename << std::endl;
-            } else if (format == "spice") {
-                // Cria um objeto SPICE e adiciona conteúdo, imagens, rótulos e configurações de ajuda
-                SPICE spice(title, debug);
-                spice.addContent("SPICE_TEXT", main_text, debug);
-                spice.addContent("SPICE_TITLE", title, debug);
+            }
+             else if (format == "spice") {
+                // Cria um objeto SPICEBuilder e adiciona conteúdo, imagens, rótulos e configurações de ajuda
+                SPICEBuilder builder(title, debug);
+                builder.addTitle(title);
+                builder.addContent("SPICE_TEXT", main_text);
                 for (const auto& img : image_paths) {
-                    spice.addImage(img, debug);
+                    builder.addImage(img);
                 }
                 if (createLabelsFromImages) {
-                    spice.generateLabelsFromImages(debug);
+                    builder.generateLabelsFromImages();
                 }
-                spice.addLabels(labels, debug);
-                spice.setHelp(help_text, help_link, help_badge_url, debug);
+                builder.addLabels(labels);
+                builder.setHelp(help_text, help_link, help_badge_url);
                 if (!author_image.empty()) {
-                    spice.setAuthorImage(author_image, debug);
+                    builder.setAuthorImage(author_image);
                 }
                 // Gera o arquivo SPICE a partir do template HTML
-                spice.generateSPICEFileFromTemplate("template.html", output_filename, debug);
+                TemplateWriter writer("template.html", debug);
+                writer.build(builder, output_filename);
             } else {
                 std::cerr << "Unsupported format in JSON config: " << format << std::endl;
                 return 1;
@@ -144,16 +144,21 @@ int main(int argc, char* argv[]) {
         }
 
         if (format == "spice") {
-            SPICE spice("CLI Title", debug);
+            SPICEBuilder builder("CLI Title", debug);
+            builder.addTitle("CLI Title");
             for (const auto& img : image_paths) {
-                spice.addImage(img, debug);
+                builder.addImage(img);
             }
             if (createLabelsFromImages) {
-                spice.generateLabelsFromImages(debug);
+                builder.generateLabelsFromImages();
             }
-            spice.addLabels(labels, debug);
-            spice.setHelp(help_text, helpLink, helpBadgeURL, debug);
-            spice.generateSPICEFileFromTemplate("template.html", output_filename, debug);
+            builder.addLabels(labels);
+            builder.setHelp(help_text, helpLink, helpBadgeURL);
+            if (!author_image_path.empty()) {
+                builder.setAuthorImage(author_image_path);
+            }
+            TemplateWriter writer("template.html", debug);
+            writer.build(builder, output_filename);
         } else if (format == "gif") {
             if (!createGif(output_filename, image_paths, debug)) {
                 std::cerr << "Falha ao criar o arquivo GIF: " << output_filename << std::endl;
