@@ -1,6 +1,6 @@
 # TSIMG <img src="doc/logo/tsimg.png" align="right" height="120/"/>
 
-![NEPEMVERSE](https://img.shields.io/endpoint?url=https://nepemufsc.com/.netlify/functions/verser?project=tsimg-stamp&label=LatestVersion:&labelColor=5288ce&logo=nepemverse&logoColor=white&style=metallic&color=#9e2621&cacheSeconds=3600)
+![NEPEMVERSE](https://img.shields.io/endpoint?url=https://nepemufsc.com/.netlify/functions/verser?project=tsimg-stamp&label=LatestVersion:&labelColor=5288ce&logo=nepemverse&logoColor=white&style=metallic&color=#9e2621&)
 
 
 TSIMG é uma aplicação C++ desenvolvida para facilitar a criação e manipulação de séries temporais de imagens, com o objetivo de simplificar a exibição e análise visual em diferentes contextos. A biblioteca atualmente suporta a geração de arquivos `.spice`, um formato interativo que permite a visualização e inspeção de imagens seriadas em navegadores web, além de suportar exportação em `.gif`. Planejamos adicionar outras funcionalidades úteis para análises visuais e temporais em breve.
