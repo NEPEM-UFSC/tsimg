@@ -4,6 +4,7 @@
 #include <iostream>
 #include <sstream>
 #include <filesystem>
+#include <stdexcept>
 
 TemplateWriter::TemplateWriter(const std::string& templateFile, bool debug) : debug(debug) {
     templateContent = readFileToString(templateFile);
@@ -12,8 +13,12 @@ TemplateWriter::TemplateWriter(const std::string& templateFile, bool debug) : de
     }
 }
 
-void TemplateWriter::writeToFile(const std::string& outputFile, const std::vector<SpiceContent>& contents, const ImageList& imageList, const std::vector<std::string>& labels, const std::string& authorImageBase64) {
-    if (!validateImageListAndLabels(imageList, labels)) {
+void TemplateWriter::writeToFile(const std::string& outputFile, 
+                                 const std::vector<SpiceContent>& contents, 
+                                 const std::map<std::string, ImageList>& imageLists, 
+                                 const std::vector<std::string>& labels, 
+                                 const std::string& authorImageBase64) {
+    if (!validateImageListAndLabels(imageLists, labels)) {
         if (debug) {
             std::cerr << "Validation failed: The number of images and labels must be the same." << std::endl;
         }
@@ -21,9 +26,7 @@ void TemplateWriter::writeToFile(const std::string& outputFile, const std::vecto
     }
 
     std::string outputContent = replaceAllTags(templateContent, contents);
-
-    std::string imageContent = !imageList.getImages().empty() ? imageList.generateImageTags() : "<p>No images available</p>";
-    outputContent = replaceTag(outputContent, "<SPICE_IMAGES>", imageContent);
+    outputContent = replaceObjectPlaceholders(outputContent, imageLists);
 
     std::string labelContent;
     for (const auto& label : labels) {
@@ -48,11 +51,11 @@ void TemplateWriter::writeToFile(const std::string& outputFile, const std::vecto
 
 void TemplateWriter::build(const SPICEBuilder& builder, const std::string& outputFile) {
     const auto& contents = builder.getContents();
-    const auto& imageList = builder.getImageList();
+    const auto& imageLists = builder.getImageLists();
     const auto& labels = builder.getLabels();
     const auto& authorImageBase64 = builder.getAuthorImageBase64();
 
-    if (!validateImageListAndLabels(imageList, labels)) {
+    if (!validateImageListAndLabels(imageLists, labels)) {
         if (debug) {
             std::cerr << "Validation failed: The number of images and labels must be the same." << std::endl;
         }
@@ -60,9 +63,7 @@ void TemplateWriter::build(const SPICEBuilder& builder, const std::string& outpu
     }
 
     std::string outputContent = replaceAllTags(templateContent, contents);
-
-    std::string imageContent = !imageList.getImages().empty() ? imageList.generateImageTags() : "<p>No images available</p>";
-    outputContent = replaceTag(outputContent, "<SPICE_IMAGES>", imageContent);
+    outputContent = replaceObjectPlaceholders(outputContent, imageLists);
 
     std::string labelContent;
     for (const auto& label : labels) {
@@ -86,15 +87,28 @@ void TemplateWriter::build(const SPICEBuilder& builder, const std::string& outpu
 }
 
 std::string TemplateWriter::readFileToString(const std::string& filePath) {
-    std::ifstream file(filePath);
-    std::stringstream buffer;
-    buffer << file.rdbuf();
-    return buffer.str();
+    std::ifstream file(filePath, std::ios::in | std::ios::binary | std::ios::ate);
+    if (!file.is_open()) {
+        throw std::runtime_error("Could not open file: " + filePath);
+    }
+
+    std::streamsize size = file.tellg();
+    file.seekg(0, std::ios::beg);
+
+    std::string buffer(size, '\0');
+    if (!file.read(&buffer[0], size)) {
+        throw std::runtime_error("Error reading file: " + filePath);
+    }
+
+    return buffer;
 }
 
 std::string TemplateWriter::replaceTag(const std::string& source, const std::string& tag, const std::string& replacement) {
     std::string result = source;
     size_t pos = result.find(tag);
+    if (pos == std::string::npos) {
+        throw std::runtime_error("Placeholder not found: " + tag);
+    }
     while (pos != std::string::npos) {
         result.replace(pos, tag.length(), replacement);
         pos = result.find(tag, pos + replacement.length());
@@ -102,14 +116,31 @@ std::string TemplateWriter::replaceTag(const std::string& source, const std::str
     return result;
 }
 
-bool TemplateWriter::validateImageListAndLabels(const ImageList& imageList, const std::vector<std::string>& labels) {
-    return imageList.getImages().size() == labels.size();
+bool TemplateWriter::validateImageListAndLabels(const std::map<std::string, ImageList>& imageLists, const std::vector<std::string>& labels) {
+    for (const auto& [tag, imageList] : imageLists) {
+        if (imageList.getImages().size() != labels.size()) {
+            return false;
+        }
+    }
+    return true;
 }
 
 std::string TemplateWriter::replaceAllTags(const std::string& source, const std::vector<SpiceContent>& contents) {
     std::string result = source;
     for (const auto& content : contents) {
         result = replaceTag(result, "<" + content.getTag() + ">", content.getVariableContent());
+    }
+    return result;
+}
+
+std::string TemplateWriter::replaceObjectPlaceholders(const std::string& source, const std::map<std::string, ImageList>& imageLists) {
+    std::string result = source;
+    for (const auto& [tag, imageList] : imageLists) {
+        if (source.find("<" + tag + ">") == std::string::npos) {
+            throw std::runtime_error("Placeholder not found for tag: " + tag);
+        }
+        std::string imageContent = !imageList.getImages().empty() ? imageList.generateImageTags() : "<p>No images available</p>";
+        result = replaceTag(result, "<" + tag + ">", imageContent);
     }
     return result;
 }
