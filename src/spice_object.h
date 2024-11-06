@@ -50,14 +50,14 @@ public:
     SPICEBuilder& addTitle(const std::string& title);
 
     const std::vector<SpiceContent>& getContents() const;
-    const ImageList& getImageList() const;
+    const std::map<std::string, ImageList>& getImageLists() const;
     const std::vector<std::string>& getLabels() const;
     const std::string& getAuthorImageBase64() const;
 
 private:
     std::string title;
     bool debug;
-    ImageList imageList;
+    std::map<std::string, ImageList> imageLists;
     std::vector<SpiceContent> contents;
     std::vector<std::string> labels;
     std::string authorImageBase64;
@@ -70,7 +70,7 @@ public:
 
 private:
     std::string title;
-    ImageList imageList;
+    std::map<std::string, ImageList> imageLists;
     std::vector<SpiceContent> contents;
     std::vector<std::string> labels;
     std::string authorImageBase64;

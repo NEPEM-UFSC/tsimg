@@ -63,7 +63,7 @@ SPICEBuilder& SPICEBuilder::addImage(const std::string& imagePath) {
     
     std::string base64Image = encodeImageToBase64(imagePath, debug);
     if (!base64Image.empty()) {
-        imageList.addImage(Image(imagePath, base64Image));
+        imageLists["SPICE_IMAGES"].addImage(Image(imagePath, base64Image));
         if (debug) std::cout << "Image added successfully." << std::endl;
     } else {
         if (debug) std::cout << "Failed to add image." << std::endl;
@@ -93,7 +93,7 @@ SPICEBuilder& SPICEBuilder::addLabels(const std::vector<std::string>& labelList)
 SPICEBuilder& SPICEBuilder::generateLabelsFromImages() {
     if (debug) std::cout << "Generating labels from image names..." << std::endl;
     labels.clear();
-    for (const auto& image : imageList.getImages()) {
+    for (const auto& image : imageLists["SPICE_IMAGES"].getImages()) {
         std::string label = std::filesystem::path(image.getPath()).stem().string();
         labels.push_back(label);
         if (debug) std::cout << "Generated label: " << label << std::endl;
@@ -135,8 +135,8 @@ const std::vector<SpiceContent>& SPICEBuilder::getContents() const {
     return contents;
 }
 
-const ImageList& SPICEBuilder::getImageList() const {
-    return imageList;
+const std::map<std::string, ImageList>& SPICEBuilder::getImageLists() const {
+    return imageLists;
 }
 
 const std::vector<std::string>& SPICEBuilder::getLabels() const {
@@ -156,7 +156,7 @@ SPICE::SPICE(const std::string& title, bool debug) : title(title) {
 
 void SPICE::generateSPICEFileFromTemplate(const std::string& templateFile, const std::string& outputFile, bool debug) {
     TemplateWriter writer(templateFile, debug);
-    writer.writeToFile(outputFile, contents, imageList, labels, authorImageBase64);
+    writer.writeToFile(outputFile, contents, imageLists, labels, authorImageBase64);
 }
 
 std::string SPICE::generateLabelTags() {
