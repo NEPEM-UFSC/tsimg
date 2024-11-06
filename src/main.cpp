@@ -57,9 +57,9 @@ void display_info() {
     std::cout << "   | $$   |  $$$$$$/ /$$$$$$| $$ \\/  | $$|  $$$$$$/" << std::endl;
     std::cout << "   |__/    \\______/ |______/|__/     |__/ \\______/ " << std::endl;
     std::cout << "\n===================================================" << std::endl;
-    std::cout << "  Temporal Series Interactive Imager (TSIMG)       " << std::endl;
+    std::cout << " \nTemporal Series Interactive Imager (TSIMG) v0.0.1-alpha\n" << std::endl;
     std::cout << "===================================================" << std::endl;
-    std::cout << "\nA tool for creating interactive images of time series." << std::endl;
+    std::cout << "\n A tool for creating interactive images of time series." << std::endl;
     std::cout << "Supports export to SPICE and GIF formats." << std::endl;
     std::cout << "For more information, please visit: \nhttps://github.com/NEPEM-UFSC/tsimg" << std::endl;
     std::cout << "\n===================================================\n" << std::endl;
