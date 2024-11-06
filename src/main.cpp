@@ -64,13 +64,17 @@ void display_info() {
     std::cout << "For more information, please visit: \nhttps://github.com/NEPEM-UFSC/tsimg" << std::endl;
     std::cout << "\n===================================================\n" << std::endl;
 }
+
+//TODO Implementar funcionalidade de vs(dupla imagelist) para o CLI
+//TODO Verificar a fundo funcionamento e identificar problemas
+
 int main(int argc, char* argv[]) {
     std::string output_filename;
     std::vector<std::string> image_paths;
     std::vector<std::string> labels;
     bool debug = false;
     bool createLabelsFromImages = false;
-    std::string format = "spice";  // Default format is "spice"
+    std::string format = "spice";
     std::string json_config_file;
     std::string author_image_path;
 
@@ -120,7 +124,6 @@ int main(int argc, char* argv[]) {
             // Extrai valores do JSON, usando valores padrão se as chaves não estiverem presentes
             format = config.value("export_format", "spice");
             output_filename = config.value("output_filename", "output.html");
-            image_paths = config.value("images", std::vector<std::string>{});
             labels = config.value("labels", std::vector<std::string>{});
             std::string title = config.value("title", "SPICE Presentation");
             std::string help_text = config.value("help_text", "Mais informações disponíveis no botão abaixo.");
@@ -128,7 +131,27 @@ int main(int argc, char* argv[]) {
             std::string help_badge_url = config.value("help_badge_url", "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGNsYXNzPSJsdWNpZGUgbHVjaWRlLWNpcmNsZS1oZWxwIj48Y2lyY2xlIGN4PSIxMiIgY3k9IjEyIiByPSIxMCIvPjxwYXRoIGQ9Ik05LjA5IDlhMyAzIDAgMCAxIDUuODMgMWMwIDItMyAzLTMgMyIvPjxwYXRoIGQ9Ik0xMiAxN2guMDEiLz48L3N2Zz4=");
             std::string author_image = config.value("author_image", "");
             std::string main_text = config.value("main_text", "This is generated from a JSON config.");
-    
+
+            // Processa múltiplas listas de imagens
+            std::map<std::string, ImageList> imageLists;
+            std::vector<std::string> imageKeys = {"IMAGES", "IMAGES_1"};
+            for (size_t i = 0; i < imageKeys.size(); ++i) {
+                if (config.contains(imageKeys[i])) {
+                    std::string placeholder = "SPICE_IMAGES";
+                    if (i > 0) {
+                        placeholder += "_" + std::to_string(i);
+                    }
+                    ImageList imageList;
+                    for (const auto& img : config[imageKeys[i]]) {
+                        std::string base64Image = encodeImageToBase64(img, debug);
+                        if (!base64Image.empty()) {
+                            imageList.addImage(Image(img, base64Image));
+                        }
+                    }
+                    imageLists[placeholder] = imageList;
+                }
+            }
+
             // Verifica o formato de exportação
             if (format == "gif") {
                 // Cria um arquivo GIF
@@ -136,15 +159,11 @@ int main(int argc, char* argv[]) {
                     std::cerr << "Failed to create GIF file: " << output_filename << std::endl;
                     return 1;
                 }
-            }
-             else if (format == "spice") {
+            } else if (format == "spice") {
                 // Cria um objeto SPICEBuilder e adiciona conteúdo, imagens, rótulos e configurações de ajuda
                 SPICEBuilder builder(title, debug);
                 builder.addTitle(title);
                 builder.addContent("SPICE_TEXT", main_text);
-                for (const auto& img : image_paths) {
-                    builder.addImage(img);
-                }
                 if (createLabelsFromImages) {
                     builder.generateLabelsFromImages();
                 }
@@ -154,8 +173,8 @@ int main(int argc, char* argv[]) {
                     builder.setAuthorImage(author_image);
                 }
                 // Gera o arquivo SPICE a partir do template HTML
-                TemplateWriter writer("template.html", debug);
-                writer.build(builder, output_filename);
+                TemplateWriter writer("template_vs.html", debug);
+                writer.writeToFile(output_filename, builder.getContents(), imageLists, labels, builder.getAuthorImageBase64());
             } else {
                 std::cerr << "Unsupported format in JSON config: " << format << std::endl;
                 return 1;
