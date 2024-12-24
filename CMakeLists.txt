@@ -24,16 +24,3 @@ set(SOURCES
 )
 
 add_executable(tsimg ${SOURCES})
-
-add_custom_command(TARGET tsimg POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-    ${CMAKE_SOURCE_DIR}/tsimg.manifest $<TARGET_FILE_DIR:tsimg>/tsimg.manifest
-)
-
-# Vincula o manifesto ao executável
-if (WIN32)
-    add_custom_command(TARGET tsimg POST_BUILD
-        COMMAND "C:/Program Files (x86)/Windows Kits/10/bin/10.0.26100.0/x64/mt.exe" -manifest $<TARGET_FILE_DIR:tsimg>/tsimg.manifest -outputresource:$<TARGET_FILE:tsimg>;#1
-        COMMENT "Embedding manifest into executable"
-    )
-endif()
