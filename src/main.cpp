@@ -6,8 +6,9 @@
 #include <sstream>
 #include <filesystem>
 #include <nlohmann/json.hpp>
-#include "tsimg_spice.h" // Incluir o novo cabeçalho para funcionalidades relacionadas ao SPICE
-#include "tsimg_gif.h" // Incluir o novo cabeçalho para funções relacionadas a GIF
+#include "tsimg_spice.h" 
+#include "tsimg_gif.h"
+#include "build_info.h"
 
 // Funções utilitárias
 std::vector<std::string> split(const std::string& str, char delimiter) {
@@ -67,23 +68,42 @@ std::string help_text = "Mais informações disponíveis no botão abaixo.";
 std::string helpBadgeURL = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGNsYXNzPSJsdWNpZGUgbHVjaWRlLWNpcmNsZS1oZWxwIj48Y2lyY2xlIGN4PSIxMiIgY3k9IjEyIiByPSIxMCIvPjxwYXRoIGQ9Ik05LjA5IDlhMyAzIDAgMCAxIDUuODMgMWMwIDItMyAzLTMgMyIvPjxwYXRoIGQ9Ik0xMiAxN2guMDEiLz48L3N2Zz4=";
 std::string helpLink = "https://github.com/NEPEM-UFSC/tsimg";
 
+bool app_info = false;
+
 void display_info() {
-    std::cout << "===================================================\n" << std::endl;
-    std::cout << " /$$$$$$$$  /$$$$$$  /$$$$$$ /$$      /$$  /$$$$$$ " << std::endl;
-    std::cout << "|__  $$__/ /$$__  $$|_  $$_/| $$$    /$$$ /$$__  $$" << std::endl;
-    std::cout << "   | $$   | $$  \\__/  | $$  | $$$$  /$$$$| $$  \\__/" << std::endl;
-    std::cout << "   | $$   |  $$$$$$   | $$  | $$ $$/$$ $$| $$ /$$$$" << std::endl;
-    std::cout << "   | $$    \\____  $$  | $$  | $$  $$$| $$| $$|_  $$" << std::endl;
-    std::cout << "   | $$    /$$  \\ $$  | $$  | $$\\  $ | $$| $$  \\ $$" << std::endl;
-    std::cout << "   | $$   |  $$$$$$/ /$$$$$$| $$ \\/  | $$|  $$$$$$/" << std::endl;
-    std::cout << "   |__/    \\______/ |______/|__/     |__/ \\______/ " << std::endl;
-    std::cout << "\n===================================================" << std::endl;
-    std::cout << " \nTemporal Series Interactive Imager (TSIMG) v0.0.1-alpha\n" << std::endl;
-    std::cout << "===================================================" << std::endl;
-    std::cout << "\n A tool for creating interactive images of time series." << std::endl;
-    std::cout << "Supports export to SPICE and GIF formats." << std::endl;
-    std::cout << "For more information, please visit: \nhttps://github.com/NEPEM-UFSC/tsimg" << std::endl;
-    std::cout << "\n===================================================\n" << std::endl;
+    if (app_info) {
+        std::cout << "===================================================\n" << std::endl;
+        std::cout << " /$$$$$$$$  /$$$$$$  /$$$$$$ /$$      /$$  /$$$$$$ " << std::endl;
+        std::cout << "|__  $$__/ /$$__  $$|_  $$_/| $$$    /$$$ /$$__  $$" << std::endl;
+        std::cout << "   | $$   | $$  \\__/  | $$  | $$$$  /$$$$| $$  \\__/" << std::endl;
+        std::cout << "   | $$   |  $$$$$$   | $$  | $$ $$/$$ $$| $$ /$$$$" << std::endl;
+        std::cout << "   | $$    \\____  $$  | $$  | $$  $$$| $$| $$|_  $$" << std::endl;
+        std::cout << "   | $$    /$$  \\ $$  | $$  | $$\\  $ | $$| $$  \\ $$" << std::endl;
+        std::cout << "   | $$   |  $$$$$$/ /$$$$$$| $$ \\/  | $$|  $$$$$$/" << std::endl;
+        std::cout << "   |__/    \\______/ |______/|__/     |__/ \\______/ " << std::endl;
+        std::cout << "\n===================================================" << std::endl;
+        std::cout << " \nTemporal Series Interactive Imager (TSIMG)\n" << std::endl;
+        std::cout << "===================================================" << std::endl;
+        std::cout << "\n A tool for creating interactive images of time series." << std::endl;
+        std::cout << "Supports export to SPICE and GIF formats." << std::endl;
+        std::cout << "For more information, please visit: \nhttps://github.com/NEPEM-UFSC/tsimg" << std::endl;
+        std::cout << "\n===================================================\n" << std::endl;
+        #ifdef BUILD_INFO
+            std::cout << BUILD_INFO << std::endl;
+        #else
+            std::cout << "Build information not available." << std::endl;
+        #endif
+    }
+    std::cerr << "Usage: create_file -n <output_filename> -i <image1.jpg,image2.png,...> [-l <label1,label2,...>] [-f <format>] [-debug] [-config <config.json>]" << std::endl;
+    std::cerr << "Options:" << std::endl;
+    std::cerr << "  -n <output_filename>    Specify the output filename." << std::endl;
+    std::cerr << "  -i <image_paths>        Comma-separated list of image paths." << std::endl;
+    std::cerr << "  -l <labels>             Comma-separated list of labels (optional)." << std::endl;
+    std::cerr << "  -f <format>             Output format: 'spice' or 'gif' (default: 'spice')." << std::endl;
+    std::cerr << "  -debug                  Enable debug mode (optional)." << std::endl;
+    std::cerr << "  --config <config.json>   Path to JSON config file (optional)." << std::endl;
+    std::cerr << "  --labelbyname           Generate labels from image names (optional)." << std::endl;
+    std::cerr << "  -author_image <author_image_path>   Path to author image (optional)." << std::endl;
 }
 
 //TODO Implementar funcionalidade de vs(dupla imagelist) para o CLI
@@ -99,24 +119,19 @@ int main(int argc, char* argv[]) {
     std::string json_config_file;
     std::string author_image_path;
 
+    // [1] Parse -2, -3, etc., e armazene em vector<string> imagePathsExtrasN (onde N indica indice).
+    std::vector<std::vector<std::string>> imagePathsExtras;
+
     if (argc == 1) {
         display_info();
-        std::cerr << "Usage: create_file -n <output_filename> -i <image1.jpg,image2.png,...> [-l <label1,label2,...>] [-f <format>] [-debug] [-config <config.json>]" << std::endl;
-        std::cerr << "Options:" << std::endl;
-        std::cerr << "  -n <output_filename>    Specify the output filename." << std::endl;
-        std::cerr << "  -i <image_paths>        Comma-separated list of image paths." << std::endl;
-        std::cerr << "  -l <labels>             Comma-separated list of labels (optional)." << std::endl;
-        std::cerr << "  -f <format>             Output format: 'spice' or 'gif' (default: 'spice')." << std::endl;
-        std::cerr << "  -debug                  Enable debug mode (optional)." << std::endl;
-        std::cerr << "  --config <config.json>   Path to JSON config file (optional)." << std::endl;
-        std::cerr << "  --labelbyname           Generate labels from image names (optional)." << std::endl;
-        std::cerr << "  -author_image <author_image_path>   Path to author image (optional)." << std::endl;
         return 1;
     }
 
     for (int i = 1; i < argc; ++i) {
         if (std::strcmp(argv[i], "-info") == 0) {
+            app_info=true;
             display_info();
+            app_info=false;
             return 0;
         } else if (std::strcmp(argv[i], "-n") == 0 && i + 1 < argc) {
             output_filename = argv[++i];
@@ -134,6 +149,10 @@ int main(int argc, char* argv[]) {
             createLabelsFromImages = true;
         } else if (std::strcmp(argv[i], "-authorimage") == 0 && i + 1 < argc) {
             author_image_path = argv[++i];
+        } else if (std::strncmp(argv[i], "-2", 2) == 0 && i + 1 < argc) {
+            imagePathsExtras.push_back(split(argv[++i], ','));
+        } else if (std::strncmp(argv[i], "-3", 2) == 0 && i + 1 < argc) {
+            imagePathsExtras.push_back(split(argv[++i], ','));
         }
     }
 
@@ -153,27 +172,22 @@ int main(int argc, char* argv[]) {
             std::string author_image = config.value("author_image", "");
             std::string main_text = config.value("main_text", "This is generated from a JSON config.");
 
-            // Processa múltiplas listas de imagens
+            // [2] Em JSON, substitua (ou amplie) a lógica de imageKeys para buscar "images", "images_1", "images_2"...
+            // use laços para varrer possíveis chaves e montar map<string, ImageList> imageLists
             std::map<std::string, ImageList> imageLists;
-            std::vector<std::string> imageKeys = {"IMAGES", "IMAGES_1"};
-            for (size_t i = 0; i < imageKeys.size(); ++i) {
-                if (config.contains(imageKeys[i])) {
-                    std::string placeholder = "SPICE_IMAGES";
-                    if (i > 0) {
-                        placeholder += "_" + std::to_string(i);
-                    }
+            for (int i = 0; ; ++i) {
+                std::string key = "images" + (i == 0 ? "" : "_" + std::to_string(i));
+                if (config.contains(key)) {
+                    std::string placeholder = "SPICE_IMAGES" + (i == 0 ? "" : "_" + std::to_string(i));
                     ImageList imageList;
-                    for (const auto& img : config[imageKeys[i]]) {
+                    for (const auto& img : config[key]) {
                         if (debug) std::cout << "Processing image: " << img << std::endl;
-                        std::string base64Image = encodeImageToBase64(img, debug);
-                        if (!base64Image.empty()) {
-                            imageList.addImage(Image(img, base64Image));
-                            if (debug) std::cout << "Image added successfully: " << img << std::endl;
-                        } else {
-                            if (debug) std::cerr << "Failed to add image: " << img << std::endl;
-                        }
+                        imageList.addImage(Image(img, "")); // Armazena apenas o caminho da imagem
+                        if (debug) std::cout << "Image added successfully: " << img << std::endl;
                     }
                     imageLists[placeholder] = imageList;
+                } else {
+                    break;
                 }
             }
 
@@ -185,7 +199,6 @@ int main(int argc, char* argv[]) {
                     return 1;
                 }
             } else if (format == "spice") {
-                // Cria um objeto SPICEBuilder e adiciona conteúdo, imagens, rótulos e configurações de ajuda
                 SPICEBuilder builder(title, debug);
                 builder.addTitle(title);
                 builder.addContent("SPICE_TEXT", main_text);
@@ -197,8 +210,13 @@ int main(int argc, char* argv[]) {
                 if (!author_image.empty()) {
                     builder.setAuthorImage(author_image);
                 }
+                for (const auto& [tag, list] : imageLists) {
+                    for (const auto& img : list.getImages()) {
+                        builder.addImageToList(tag, img.getPath());
+                    }
+                }
                 TemplateWriter writer("template_vs.html", debug);
-                writer.writeToFile(output_filename, builder.getContents(), imageLists, labels, builder.getAuthorImageBase64());
+                writer.writeToFile(output_filename, builder.getContents(), builder.getImageLists(), labels, builder.getAuthorImageBase64());
             } else {
                 std::cerr << "Unsupported format in JSON config: " << format << std::endl;
                 return 1;
@@ -209,16 +227,7 @@ int main(int argc, char* argv[]) {
         }
     } else {
         if (output_filename.empty() || image_paths.empty()) {
-            std::cerr << "Usage: create_file -n <output_filename> -i <image1.jpg,image2.png,...> [-l <label1,label2,...>] [-f <format>] [-debug] [-config <config.json>]" << std::endl;
-            std::cerr << "Options:" << std::endl;
-            std::cerr << "  -n <output_filename>    Specify the output filename." << std::endl;
-            std::cerr << "  -i <image_paths>        Comma-separated list of image paths." << std::endl;
-            std::cerr << "  -l <labels>             Comma-separated list of labels (optional)." << std::endl;
-            std::cerr << "  -f <format>             Output format: 'spice' or 'gif' (default: 'spice')." << std::endl;
-            std::cerr << "  -debug                  Enable debug mode (optional)." << std::endl;
-            std::cerr << "  --config <config.json>   Path to JSON config file (optional)." << std::endl;
-            std::cerr << "  --labelbyname           Generate labels from image names (optional)." << std::endl;
-            std::cerr << "  -author_image <author_image_path>   Path to author image (optional)." << std::endl;
+            display_info();
             return 1;
         }
 
@@ -235,6 +244,12 @@ int main(int argc, char* argv[]) {
             builder.setHelp(help_text, helpLink, helpBadgeURL);
             if (!author_image_path.empty()) {
                 builder.setAuthorImage(author_image_path);
+            }
+            for (size_t i = 0; i < imagePathsExtras.size(); ++i) {
+                std::string tag = "SPICE_IMAGES_" + std::to_string(i + 1);
+                for (const auto& img : imagePathsExtras[i]) {
+                    builder.addImageToList(tag, img);
+                }
             }
             TemplateWriter writer("new_template.html", debug);
             writer.writeToFile(output_filename, builder.getContents(), builder.getImageLists(), labels, builder.getAuthorImageBase64());
