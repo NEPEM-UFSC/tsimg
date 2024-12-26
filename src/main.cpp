@@ -119,7 +119,6 @@ int main(int argc, char* argv[]) {
     std::string json_config_file;
     std::string author_image_path;
 
-    // [1] Parse -2, -3, etc., e armazene em vector<string> imagePathsExtrasN (onde N indica indice).
     std::vector<std::vector<std::string>> imagePathsExtras;
 
     if (argc == 1) {
@@ -158,22 +157,18 @@ int main(int argc, char* argv[]) {
 
     if (!json_config_file.empty()) {
         try {
-            // Lê o arquivo JSON de configuração
             nlohmann::json config = read_json_file(json_config_file, debug);
             
-            // Extrai valores do JSON, usando valores padrão se as chaves não estiverem presentes
             format = config.value("export_format", "spice");
             output_filename = config.value("output_filename", "output.html");
             labels = config.value("labels", std::vector<std::string>{});
             std::string title = config.value("title", "SPICE Presentation");
-            std::string help_text = config.value("help_text", "Mais informações disponíveis no botão abaixo.");
-            std::string help_link = config.value("help_link", "https://github.com/NEPEM-UFSC/tsimg");
-            std::string help_badge_url = config.value("help_badge_url", "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGNsYXNzPSJsdWNpZGUgbHVjaWRlLWNpcmNsZS1oZWxwIj48Y2lyY2xlIGN4PSIxMiIgY3k9IjEyIiByPSIxMCIvPjxwYXRoIGQ9Ik05LjA5IDlhMyAzIDAgMCAxIDUuODMgMWMwIDItMyAzLTMgMyIvPjxwYXRoIGQ9Ik0xMiAxN2guMDEiLz48L3N2Zz4=");
+            std::string help_text = config.value("help_text", "");
+            std::string help_link = config.value("help_link", "");
+            std::string help_badge_url = config.value("help_badge_url", "");
             std::string author_image = config.value("author_image", "");
             std::string main_text = config.value("main_text", "This is generated from a JSON config.");
 
-            // [2] Em JSON, substitua (ou amplie) a lógica de imageKeys para buscar "images", "images_1", "images_2"...
-            // use laços para varrer possíveis chaves e montar map<string, ImageList> imageLists
             std::map<std::string, ImageList> imageLists;
             for (int i = 0; ; ++i) {
                 std::string key = "images" + (i == 0 ? "" : "_" + std::to_string(i));
@@ -182,7 +177,7 @@ int main(int argc, char* argv[]) {
                     ImageList imageList;
                     for (const auto& img : config[key]) {
                         if (debug) std::cout << "Processing image: " << img << std::endl;
-                        imageList.addImage(Image(img, "")); // Armazena apenas o caminho da imagem
+                        imageList.addImage(Image(img, ""));
                         if (debug) std::cout << "Image added successfully: " << img << std::endl;
                     }
                     imageLists[placeholder] = imageList;
@@ -191,9 +186,7 @@ int main(int argc, char* argv[]) {
                 }
             }
 
-            // Verifica o formato de exportação
             if (format == "gif") {
-                // Cria um arquivo GIF
                 if (!createGif(output_filename, image_paths, debug)) {
                     std::cerr << "Failed to create GIF file: " << output_filename << std::endl;
                     return 1;
@@ -206,7 +199,9 @@ int main(int argc, char* argv[]) {
                     builder.generateLabelsFromImages();
                 }
                 builder.addLabels(labels);
-                builder.setHelp(help_text, help_link, help_badge_url);
+                if (!help_text.empty() && !help_link.empty() && !help_badge_url.empty()) {
+                    builder.setHelp(help_text, help_link, help_badge_url);
+                }
                 if (!author_image.empty()) {
                     builder.setAuthorImage(author_image);
                 }
