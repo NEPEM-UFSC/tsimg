@@ -11,16 +11,18 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -funroll-loops")
 set(CMAKE_BUILD_TYPE Debug)
 # set(CMAKE_BUILD_TYPE Release)
-# set(SOURCES
-#     src/main.cpp
-#     src/tsimg.cpp
-#     src/spice_constructor.cpp
-#     src/image_utils.cpp
-#     src/template_writer.cpp
-#     version.rc
-# )
 
 include_directories(include third_party)
+
+# Add a custom command to generate build info
+add_custom_command(
+    OUTPUT ${CMAKE_SOURCE_DIR}/src/build_info.h
+    COMMAND ${CMAKE_COMMAND} -E env python ${CMAKE_SOURCE_DIR}/utils/generate_build_info.py
+    DEPENDS ${CMAKE_SOURCE_DIR}/utils/generate_build_info.py
+)
+
+# Ensure the build info header is generated before building the target
+add_custom_target(generate_build_info DEPENDS ${CMAKE_SOURCE_DIR}/src/build_info.h)
 
 set(SOURCES
     src/main.cpp
@@ -30,3 +32,6 @@ set(SOURCES
 )
 
 add_executable(tsimg ${SOURCES})
+
+# Make sure the build info is generated before building the executable
+add_dependencies(tsimg generate_build_info)
