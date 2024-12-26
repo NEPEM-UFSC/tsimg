@@ -1,20 +1,9 @@
 <!DOCTYPE html>
-<!--
-    Este é um arquivo HTML, gerado a partir de um arquivo .spice.
-    Um arquivo .spice é um formato customizado desenvolvido para facilitar a exibição de imagens seriadas em uma plataforma web, multiplataforma, sem a necessidade de plugins ou extensões adicionais. Imagens seriadas são uma série de imagens que representam alterações temporais ou dimensionais de um objeto ou fenômeno, e são comumente utilizadas em áreas como medicina, geociências, astronomia, entre outras. Seus usos incluem a visualização de mapas de profundiade, imagens de ressonância magnética, tomografias computadorizadas, imagens de satélite em diferentes datas e etc.
-    O nome "SPICE" é um acrônimo para "Serialized Picture Interactive Content Environment". Este formato permite a integração de texto, imagens e outros elementos multimídia em um único arquivo HTML, que pode ser facilmente visualizado em navegadores modernos.
-
-    A criação e manipulação de arquivos .spice é feita atraves do projeto TSIMG, que visa facilitar a visualização de imagens seriadas em navegadores web. O projeto TSIMG e suas ferramentas, como o gerador deste arquivo são mantidos pelo NEPEM-UFSC
-
-    Para mais informações sobre o projeto TSIMG, visite o repositório oficial no GitHub:
-    www.github.com/NEPEM-UFSC/tsimg
-
--->
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title> <SPICE_TITLE> </title>
+    <title><SPICE_TITLE></title>
     <style>
         body {
             font-family: 'Roboto', sans-serif;
@@ -23,8 +12,7 @@
             background-color: #f4f4f9;
             color: #333;
         }
-        
-        /* Main Content Area */
+
         .content {
             margin-bottom: 20px;
             font-size: 1.2em;
@@ -44,16 +32,27 @@
             margin-top: 20px;
         }
         
-        .slider-images {
+        .slider-images-container {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
             width: 100%;
+            max-width: 100%;
+            overflow: hidden;
+        }
+        
+        .slider-images {
             display: flex;
             justify-content: center;
-            margin: 0 auto;
+            align-items: center;
+            flex: 1;
         }
         
         .slider-images img {
             max-height: 70vh;
+            max-width: 100%;
             width: auto;
+            height: auto;
             display: none;
         }
         
@@ -116,6 +115,7 @@
             margin-left: 40px;
             font-size: 2em;
         }
+        
         .speed-control {
             display: flex;
             align-items: center;
@@ -134,7 +134,7 @@
         .speed-option:hover {
             color: #388E3C;
         }
-
+        
         /* Bottom Objects Container */
         .bottom-objects {
             position: fixed;
@@ -147,7 +147,7 @@
             padding: 0 10px;
             z-index: 1000;
         }
-
+        
         /* Author Logo on the Bottom Left */
         .author-logo {
             max-width: 10vw;
@@ -160,7 +160,7 @@
             align-items: center;
             justify-content: center;
         }
-
+        
         .author-logo img {
             width: 70%;
             height: 70%;
@@ -196,7 +196,7 @@
             overflow-y: auto;
             z-index: 1000;
         }
-
+        
         .help-badge {
             display: flex;
             justify-content: center;
@@ -216,28 +216,34 @@
         .help-badge:hover {
             background-color: #388E3C;
         }
-
+        
         /* Responsive Adjustments */
         @media (max-width: 600px) {
+            .slider-images-container {
+                flex-direction: column;
+            }
+        
+            .slider-images img {
+                max-width: 90%;
+                max-height: 50vh;
+            }
+        
             .author-logo, .help-button-container {
                 max-width: 15vw;
             }
-
+        
             .help-text {
                 width: 80vw;
                 padding: 8px;
+                font-size: 0.8em;
             }
         }
     </style>
 </head>
 <body>
-    
-    <SPICE_TITLE>
-    
     <div class="content">
         <SPICE_TEXT>
     </div>
-
     <div class="slider-container">
         <SPICE_SLIDER>
         <div class="slider-control">
@@ -251,26 +257,30 @@
             </div>
         </div>
     </div>
-    <div class="slider-images">
-        <SPICE_IMAGES>
+    <div class="slider-images-container">
+        <div class="slider-images" id="slider-images-1">
+            <SPICE_IMAGES>
+        </div>
+        <div class="slider-images" id="slider-images-2">
+            <SPICE_IMAGES_1>
+        </div>
     </div>
-
     <div class="slider-labels">
         <SPICE_LABELS>
     </div>
-
     <div class="bottom-objects">
         <div class="author-logo">
-            <SPICE_AUTHOR_IMAGE>
+            <img src="<SPICE_AUTHOR_IMAGE>" alt="Author Image">
         </div>
         <div class="help-button-container">
             <div class="help-text">
                 <SPICE_HELP_TEXT>
+            </div>
             <div class="help-badge">
-            <SPICE_HELP_CONTENT>
+                <SPICE_HELP_CONTENT>
+            </div>
         </div>
     </div>
-
     <script>
         let isPlaying = false;
         let playInterval = null;
@@ -278,15 +288,15 @@
         const speeds = [0.5, 1.0, 1.5, 2.0, 5.0, 10.0];
         let currentSpeedIndex = 1.0;
         let playSpeed = 1.0;
-        const images = document.querySelectorAll('.slider-images img');
-
+        const images1 = document.querySelectorAll('#slider-images-1 img');
+        const images2 = document.querySelectorAll('#slider-images-2 img');
 
         function setSpeed(speed) {
             playSpeed = speed;
             if (isPlaying) {
                 clearInterval(playInterval);
                 playInterval = setInterval(() => {
-                    currentImageIndex = (currentImageIndex % images.length) + 1;
+                    currentImageIndex = (currentImageIndex % images1.length) + 1;
                     updateSlider(currentImageIndex, true);
                 }, 800 / playSpeed);
             }
@@ -298,15 +308,21 @@
             const slider = document.getElementById('imageSlider');
     
             // Remove a classe 'active' de todas as imagens
-            images.forEach((image, index) => {
+            images1.forEach((image, index) => {
+                image.classList.remove('active');
+            });
+            images2.forEach((image, index) => {
                 image.classList.remove('active');
             });
     
             // Exibe a imagem correspondente ao valor do slider
-            if (images[value - 1]) {
-                images[value - 1].classList.add('active');
-                slider.value = value;
+            if (images1[value - 1]) {
+                images1[value - 1].classList.add('active');
             }
+            if (images2[value - 1]) {
+                images2[value - 1].classList.add('active');
+            }
+            slider.value = value;
     
             // Atualiza o rótulo do slider com o rótulo correspondente
             if (labels[value - 1]) {
@@ -324,12 +340,9 @@
             setSpeed(newSpeed);
             document.getElementById('speedDisplay').innerText = `${newSpeed}x`;
         }
-
-
     
         function togglePlayPause() {
             const playerButton = document.getElementById('playerButton');
-            const images = document.querySelectorAll('.slider-images img');
 
             if (isPlaying) {
                 // Pausa a reprodução
@@ -339,7 +352,7 @@
             } else {
                 // Inicia a reprodução
                 playInterval = setInterval(() => {
-                    currentImageIndex = (currentImageIndex % images.length) + 1;
+                    currentImageIndex = (currentImageIndex % images1.length) + 1;
                     updateSlider(currentImageIndex, true);
                 }, 1600 / playSpeed);
                 isPlaying = true;
@@ -349,10 +362,9 @@
     
         document.addEventListener("DOMContentLoaded", function() {
             const slider = document.getElementById('imageSlider');
-            const images = document.querySelectorAll('.slider-images img');
             
             // Define o valor máximo do slider como o número de imagens
-            slider.max = images.length;
+            slider.max = images1.length;
     
             // Atualiza o slider para mostrar a primeira imagem
             updateSlider(slider.value, true);
@@ -360,11 +372,11 @@
             // Atualiza a imagem exibida com base no valor do slider
             slider.addEventListener('input', function() {
                 updateSlider(this.value, true);
+            });
             
             // Define a velocidade inicial
             setSpeed(speeds[currentSpeedIndex]);
             document.getElementById('speedDisplay').innerText = `${speeds[currentSpeedIndex]}x`;
-            });
         });
     </script>    
 </body>
