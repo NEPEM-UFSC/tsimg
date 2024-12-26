@@ -115,3 +115,7 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
+
+/doc/html
+/doc/latex
+/depr
