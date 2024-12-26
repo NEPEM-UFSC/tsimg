@@ -263,6 +263,13 @@ void TemplateWriter::writeToFile(const std::string& outputFile,
     // Substituir a imagem do autor
     outputContent = replaceTag(outputContent, "<SPICE_AUTHOR_IMAGE>", authorImageBase64);
 
+    // Substituir as tags de labels
+    std::string labelTags;
+    for (const auto& label : labels) {
+        labelTags += "<span>" + label + "</span>";
+    }
+    outputContent = replaceTag(outputContent, "<SPICE_LABELS>", labelTags);
+
     std::ofstream outFile(outputFile);
     if (!outFile.is_open()) {
         if (debug) std::cerr << "Error: Could not open output file: " << outputFile << std::endl;

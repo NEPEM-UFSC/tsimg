@@ -216,7 +216,7 @@ int main(int argc, char* argv[]) {
                     }
                 }
                 TemplateWriter writer("template_vs.html", debug);
-                writer.writeToFile(output_filename, builder.getContents(), builder.getImageLists(), labels, builder.getAuthorImageBase64());
+                writer.writeToFile(output_filename, builder.getContents(), builder.getImageLists(), builder.getLabels(), builder.getAuthorImageBase64());
             } else {
                 std::cerr << "Unsupported format in JSON config: " << format << std::endl;
                 return 1;
@@ -252,7 +252,7 @@ int main(int argc, char* argv[]) {
                 }
             }
             TemplateWriter writer("new_template.html", debug);
-            writer.writeToFile(output_filename, builder.getContents(), builder.getImageLists(), labels, builder.getAuthorImageBase64());
+            writer.writeToFile(output_filename, builder.getContents(), builder.getImageLists(), builder.getLabels(), builder.getAuthorImageBase64());
         } else if (format == "gif") {
             if (!createGif(output_filename, image_paths, debug)) {
                 std::cerr << "Falha ao criar o arquivo GIF: " << output_filename << std::endl;
