@@ -225,7 +225,8 @@ void SPICEBuilder::debugPrint() const {
 }
 
 bool SPICEBuilder::hasAdditionalImages() const {
-    return !imageLists.at("SPICE_IMAGES_1").getImages().empty();
+    auto it = imageLists.find("SPICE_IMAGES_1");
+    return it != imageLists.end() && !it->second.getImages().empty();
 }
 
 TemplateWriter::TemplateWriter(const std::string& templatePath, bool debug) : templatePath(templatePath), debug(debug) {
