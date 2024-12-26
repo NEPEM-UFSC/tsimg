@@ -6,22 +6,43 @@
 #include <sstream>
 #include <filesystem>
 #include <nlohmann/json.hpp>
-#include "tsimg.h"
-#include "image_utils.h"
-#include "spice_object.h"
-#include "template_writer.h"
+#include "tsimg_spice.h" // Incluir o novo cabeçalho para funcionalidades relacionadas ao SPICE
+#include "tsimg_gif.h" // Incluir o novo cabeçalho para funções relacionadas a GIF
 
+// Funções utilitárias
 std::vector<std::string> split(const std::string& str, char delimiter) {
     std::vector<std::string> tokens;
     std::string token;
     std::istringstream token_stream(str);
     while (std::getline(token_stream, token, delimiter)) {
-        // Remove leading and trailing whitespace
         token.erase(0, token.find_first_not_of(' '));
         token.erase(token.find_last_not_of(' ') + 1);
         tokens.push_back(token);
     }
     return tokens;
+}
+
+std::string concatenateStrings(const std::vector<std::string>& vec) {
+    std::ostringstream oss;
+    for (const auto& str : vec) {
+        oss << str;
+    }
+    return oss.str();
+}
+
+std::string readFileToString(const std::string& filepath, bool debug) {
+    if (debug) std::cout << "Reading file: " << filepath << std::endl;
+    
+    std::ifstream file(filepath);
+    if (!file.is_open()) {
+        std::cerr << "Erro ao abrir o arquivo de template: " << filepath << std::endl;
+        return "";
+    }
+    std::stringstream buffer;
+    buffer << file.rdbuf();
+    
+    if (debug) std::cout << "File read successfully." << std::endl;
+    return buffer.str();
 }
 
 nlohmann::json read_json_file(const std::string& filename, bool debug) {
@@ -143,9 +164,13 @@ int main(int argc, char* argv[]) {
                     }
                     ImageList imageList;
                     for (const auto& img : config[imageKeys[i]]) {
+                        if (debug) std::cout << "Processing image: " << img << std::endl;
                         std::string base64Image = encodeImageToBase64(img, debug);
                         if (!base64Image.empty()) {
                             imageList.addImage(Image(img, base64Image));
+                            if (debug) std::cout << "Image added successfully: " << img << std::endl;
+                        } else {
+                            if (debug) std::cerr << "Failed to add image: " << img << std::endl;
                         }
                     }
                     imageLists[placeholder] = imageList;
@@ -172,7 +197,6 @@ int main(int argc, char* argv[]) {
                 if (!author_image.empty()) {
                     builder.setAuthorImage(author_image);
                 }
-                // Gera o arquivo SPICE a partir do template HTML
                 TemplateWriter writer("template_vs.html", debug);
                 writer.writeToFile(output_filename, builder.getContents(), imageLists, labels, builder.getAuthorImageBase64());
             } else {
@@ -212,8 +236,8 @@ int main(int argc, char* argv[]) {
             if (!author_image_path.empty()) {
                 builder.setAuthorImage(author_image_path);
             }
-            TemplateWriter writer("template.html", debug);
-            writer.build(builder, output_filename);
+            TemplateWriter writer("new_template.html", debug);
+            writer.writeToFile(output_filename, builder.getContents(), builder.getImageLists(), labels, builder.getAuthorImageBase64());
         } else if (format == "gif") {
             if (!createGif(output_filename, image_paths, debug)) {
                 std::cerr << "Falha ao criar o arquivo GIF: " << output_filename << std::endl;
