@@ -11,15 +11,21 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -funroll-loops")
 set(CMAKE_BUILD_TYPE Debug)
 # set(CMAKE_BUILD_TYPE Release)
+# set(SOURCES
+#     src/main.cpp
+#     src/tsimg.cpp
+#     src/spice_constructor.cpp
+#     src/image_utils.cpp
+#     src/template_writer.cpp
+#     version.rc
+# )
 
 include_directories(include third_party)
 
 set(SOURCES
     src/main.cpp
-    src/tsimg.cpp
-    src/spice_constructor.cpp
-    src/image_utils.cpp
-    src/template_writer.cpp
+    src/tsimg_gif.cpp
+    src/tsimg_spice.cpp
     version.rc
 )
 
