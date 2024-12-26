@@ -17,21 +17,33 @@ include_directories(include third_party)
 # Add a custom command to generate build info
 add_custom_command(
     OUTPUT ${CMAKE_SOURCE_DIR}/src/build_info.h
+    COMMAND ${CMAKE_COMMAND} -E echo "Generating build info"
     COMMAND ${CMAKE_COMMAND} -E env python ${CMAKE_SOURCE_DIR}/utils/generate_build_info.py
     DEPENDS ${CMAKE_SOURCE_DIR}/utils/generate_build_info.py
+    COMMENT "Generating build info"
 )
 
-# Ensure the build info header is generated before building the target
-add_custom_target(generate_build_info DEPENDS ${CMAKE_SOURCE_DIR}/src/build_info.h)
+# Add a custom target to always run the build info generation
+add_custom_target(generate_build_info ALL
+    DEPENDS ${CMAKE_SOURCE_DIR}/src/build_info.h
+)
 
 set(SOURCES
+    src/build_info.h
     src/main.cpp
     src/tsimg_gif.cpp
     src/tsimg_spice.cpp
     version.rc
 )
 
+# Define the executable
 add_executable(tsimg ${SOURCES})
 
-# Make sure the build info is generated before building the executable
+# Ensure the build info is generated before compiling the executable
 add_dependencies(tsimg generate_build_info)
+
+set_target_properties(tsimg PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
+    ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
+    LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
+)
