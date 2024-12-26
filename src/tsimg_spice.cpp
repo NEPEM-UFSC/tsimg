@@ -42,7 +42,7 @@ std::vector<Image> ImageList::getImages() const {
 std::string ImageList::generateImageTags() const {
     std::string imageTags;
     for (const auto& image : images) {
-        imageTags += "<img src=\"" + image.getBase64() + "\" alt=\"" + image.getPath() + "\">";
+        imageTags += "<img src=\"data:image/png;base64," + image.getBase64() + "\" alt=\"" + image.getPath() + "\">";
     }
     return imageTags;
 }
