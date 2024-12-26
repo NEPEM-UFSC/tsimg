@@ -59,6 +59,7 @@ public:
     std::string generateImageTags() const;
     std::string generateLabelTags() const;
     void debugPrint() const;
+    bool hasAdditionalImages() const;
 
 private:
     std::string title;

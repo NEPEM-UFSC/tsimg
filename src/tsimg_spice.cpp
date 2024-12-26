@@ -224,6 +224,10 @@ void SPICEBuilder::debugPrint() const {
     std::cout << "Author Image Base64: " << (authorImageBase64.empty() ? "Not Set" : "Set") << std::endl;
 }
 
+bool SPICEBuilder::hasAdditionalImages() const {
+    return !imageLists.at("SPICE_IMAGES_1").getImages().empty();
+}
+
 TemplateWriter::TemplateWriter(const std::string& templatePath, bool debug) : templatePath(templatePath), debug(debug) {
     templateContent = readFileToString(templatePath);
 }
@@ -261,7 +265,13 @@ void TemplateWriter::writeToFile(const std::string& outputFile,
     outputContent = replaceObjectPlaceholders(outputContent, imageLists);
 
     // Substituir a imagem do autor
-    outputContent = replaceTag(outputContent, "<SPICE_AUTHOR_IMAGE>", authorImageBase64);
+    std::string authorImageTag = authorImageBase64.empty() ? "" : "data:image/png;base64," + authorImageBase64;
+    outputContent = replaceTag(outputContent, "<SPICE_AUTHOR_IMAGE>", authorImageTag);
+
+    // Remover a seção de imagem do autor se estiver vazia
+    if (authorImageTag.empty()) {
+        outputContent = replaceTag(outputContent, "<SPICE_AUTHOR_IMAGE>", "");
+    }
 
     // Substituir as tags de labels
     std::string labelTags;
@@ -269,6 +279,34 @@ void TemplateWriter::writeToFile(const std::string& outputFile,
         labelTags += "<span>" + label + "</span>";
     }
     outputContent = replaceTag(outputContent, "<SPICE_LABELS>", labelTags);
+
+    // Verificar e substituir a seção de ajuda
+    std::string helpSection = "";
+    std::string helpTextTag = "";
+    std::string helpContentTag = "";
+    for (const auto& content : contents) {
+        if (content.getTag() == "SPICE_HELP_TEXT") {
+            helpTextTag = content.getVariableContent();
+        } else if (content.getTag() == "SPICE_HELP_CONTENT") {
+            helpContentTag = content.getVariableContent();
+        }
+    }
+    if (!helpTextTag.empty() && !helpContentTag.empty()) {
+        helpSection = "<div class=\"help-button-container\">\n"
+                      "    <div class=\"help-text\">\n"
+                      "        " + helpTextTag + "\n"
+                      "    </div>\n"
+                      "    <div class=\"help-badge\">\n"
+                      "        " + helpContentTag + "\n"
+                      "    </div>\n"
+                      "</div>";
+    }
+    outputContent = replaceTag(outputContent, "<SPICE_HELP_SECTION>", helpSection);
+
+    // Remover a seção de ajuda se estiver vazia
+    if (helpSection.empty()) {
+        outputContent = replaceTag(outputContent, "<SPICE_HELP_SECTION>", "");
+    }
 
     std::ofstream outFile(outputFile);
     if (!outFile.is_open()) {
@@ -330,7 +368,8 @@ std::string TemplateWriter::replaceTag(const std::string& source, const std::str
     std::string result = source;
     size_t pos = result.find(tag);
     if (pos == std::string::npos) {
-        throw std::runtime_error("Placeholder not found: " + tag);
+        if (debug) std::cerr << "DEBUG: Placeholder not found: " + tag << " - Ignoring this section." << std::endl;
+        return result;
     }
     while (pos != std::string::npos) {
         result.replace(pos, tag.length(), replacement);
