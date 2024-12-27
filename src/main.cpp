@@ -32,7 +32,6 @@ std::string concatenateStrings(const std::vector<std::string>& vec) {
 
 std::string readFileToString(const std::string& filepath, bool debug) {
     if (debug) std::cout << "Reading file: " << filepath << std::endl;
-    
     std::ifstream file(filepath);
     if (!file.is_open()) {
         std::cerr << "Error while trying to open the template file: " << filepath << std::endl;
@@ -63,9 +62,9 @@ nlohmann::json read_json_file(const std::string& filename, bool debug) {
     return json_data;
 }
 
-std::string help_text = "...";
-std::string helpBadgeURL = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGNsYXNzPSJsdWNpZGUgbHVjaWRlLWNpcmNsZS1oZWxwIj48Y2lyY2xlIGN4PSIxMiIgY3k9IjEyIiByPSIxMCIvPjxwYXRoIGQ9Ik05LjA5IDlhMyAzIDAgMCAxIDUuODMgMWMwIDItMyAzLTMgMyIvPjxwYXRoIGQ9Ik0xMiAxN2guMDEiLz48L3N2Zz4=";
-std::string helpLink = "https://github.com/NEPEM-UFSC/tsimg";
+std::string help_text;
+std::string help_badge_url;
+std::string help_link;
 
 bool app_info = false;
 
@@ -103,6 +102,9 @@ void display_info() {
     std::cerr << "  --config <config.json>   Path to JSON config file (optional)." << std::endl;
     std::cerr << "  --labelbyname           Generate labels from image names (optional)." << std::endl;
     std::cerr << "  -author_image <author_image_path>   Path to author image (optional)." << std::endl;
+    std::cerr << "  -help_text <text>       Help text to display (optional)." << std::endl;
+    std::cerr << "  -help_link <link>       Help link URL (optional)." << std::endl;
+    std::cerr << "  -help_badge_url <url>   Help badge image URL (optional)." << std::endl;
 }
 
 int main(int argc, char* argv[]) {
@@ -116,10 +118,6 @@ int main(int argc, char* argv[]) {
     std::string author_image_path;
 
     std::vector<std::vector<std::string>> imagePathsExtras;
-
-    std::string help_text;
-    std::string help_link;
-    std::string help_badge_url;
 
     if (argc == 1) {
         display_info();
@@ -148,6 +146,12 @@ int main(int argc, char* argv[]) {
             createLabelsFromImages = true;
         } else if (std::strcmp(argv[i], "-authorimage") == 0 && i + 1 < argc) {
             author_image_path = argv[++i];
+        } else if (std::strcmp(argv[i], "-help_text") == 0 && i + 1 < argc) {
+            help_text = argv[++i];
+        } else if (std::strcmp(argv[i], "-help_link") == 0 && i + 1 < argc) {
+            help_link = argv[++i];
+        } else if (std::strcmp(argv[i], "-help_badge_url") == 0 && i + 1 < argc) {
+            help_badge_url = argv[++i];
         } else if (std::strncmp(argv[i], "-2", 2) == 0 && i + 1 < argc) {
             imagePathsExtras.push_back(split(argv[++i], ','));
         } else if (std::strncmp(argv[i], "-3", 2) == 0 && i + 1 < argc) {
