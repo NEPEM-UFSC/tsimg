@@ -250,30 +250,22 @@ void TemplateWriter::writeToFile(const std::string& outputFile,
     }
 
     std::string outputContent = templateContent;
-
-    // Substituir todas as tags de conteúdo
     outputContent = replaceAllTags(outputContent, contents);
-
-    // Substituir placeholders de objetos (listas de imagens)
     outputContent = replaceObjectPlaceholders(outputContent, imageLists);
-
-    // Substituir a imagem do autor
     std::string authorImageTag = authorImageBase64.empty() ? "" : "data:image/png;base64," + authorImageBase64;
     outputContent = replaceTag(outputContent, "<SPICE_AUTHOR_IMAGE>", authorImageTag);
 
-    // Remover a seção de imagem do autor se estiver vazia
     if (authorImageTag.empty()) {
         outputContent = replaceTag(outputContent, "<SPICE_AUTHOR_IMAGE>", "");
     }
 
-    // Substituir as tags de labels
     std::string labelTags;
     for (const auto& label : labels) {
         labelTags += "<span>" + label + "</span>";
     }
     outputContent = replaceTag(outputContent, "<SPICE_LABELS>", labelTags);
 
-    // Verificar e substituir a seção de ajuda
+
     std::string helpSection = "";
     std::string helpTextTag = "";
     std::string helpContentTag = "";
@@ -296,7 +288,6 @@ void TemplateWriter::writeToFile(const std::string& outputFile,
     }
     outputContent = replaceTag(outputContent, "<SPICE_HELP_SECTION>", helpSection);
 
-    // Remover a seção de ajuda se estiver vazia
     if (helpSection.empty()) {
         outputContent = replaceTag(outputContent, "<SPICE_HELP_SECTION>", "");
     }

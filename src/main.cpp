@@ -10,7 +10,6 @@
 #include "tsimg_gif.h"
 #include "build_info.h"
 
-// Funções utilitárias
 std::vector<std::string> split(const std::string& str, char delimiter) {
     std::vector<std::string> tokens;
     std::string token;
@@ -247,7 +246,7 @@ int main(int argc, char* argv[]) {
             writer.writeToFile(output_filename, builder.getContents(), builder.getImageLists(), builder.getLabels(), builder.getAuthorImageBase64());
         } else if (format == "gif") {
             if (!createGif(output_filename, image_paths, debug)) {
-                std::cerr << "Falha ao criar o arquivo GIF: " << output_filename << std::endl;
+                std::cerr << "Error while trying to create the gif file: " << output_filename << std::endl;
                 return 1;
             }
         } else {
