@@ -115,3 +115,9 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
+
+/doc/html
+/doc/latex
+/depr
+/bkp
+src/build_info.h
