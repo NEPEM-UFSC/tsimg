@@ -15,8 +15,12 @@ if os.path.exists(build_info_file):
     with open(build_info_file, 'r') as file:
         content = file.read().strip()
         if content:
-            version, microversion, build_number = content.split(',')
-            build_number = int(build_number) + 1
+            try:
+                version, microversion, build_number = content.split(',')
+                build_number = int(build_number) + 1
+            except ValueError:
+                print(f'Error: Invalid build number in {build_info_file}. Resetting build number to 1.')
+                version, microversion, build_number = "1.0", "0", 1
         else:
             version, microversion, build_number = "1.0", "0", 1
 else:
