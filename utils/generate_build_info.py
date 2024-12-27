@@ -31,23 +31,43 @@ print(build_info)
 try:
     with open(build_info_file, 'w') as file:
         file.write(build_info)
-        print('Build info generated successfully ')
+        print('Build info generated successfully')
+except FileNotFoundError:
+    print(f'Error: The directory for the build info file does not exist: {os.path.dirname(build_info_file)}')
+    print('Failed to generate build info')
+    exit(1)
+except PermissionError:
+    print(f'Error: Permission denied when writing to the build info file: {build_info_file}')
+    print('Failed to generate build info')
+    exit(1)
 except Exception as e:
     print(f'Error: {e}')
     print('Failed to generate build info')
     exit(1)
 
+os.makedirs('src', exist_ok=True)
+
 # Print the path to the header file
 header_file_path = '../src/build_info.h'
+header_content = f'#pragma once\n\n#define BUILD_INFO "Version: {version}\\nMicroversion: {microversion}\\nBuild Number: {build_number}\\nBuild Date: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}"\n'
 
 try:
     with open(header_file_path, 'w') as file:
-        file.write(f'#pragma once\n\n#define BUILD_INFO "Version: {version}\\nMicroversion: {microversion}\\nBuild Number: {build_number}\\nBuild Date: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}"\n')
-        print(f'Header file updated successfully at {header_file_path}')
+        file.write(header_content)
+        print('Header file generated successfully')
+except FileNotFoundError:
+    print(f'Error: The directory for the header file does not exist: {os.path.dirname(header_file_path)}')
+    print('Failed to generate header file')
+    exit(1)
+except PermissionError:
+    print(f'Error: Permission denied when writing to the header file: {header_file_path}')
+    print('Failed to generate header file')
+    exit(1)
 except Exception as e:
     print(f'Error: {e}')
     print('Failed to generate header file')
     exit(1)
+
 if os.path.exists(version_file):
     with open(version_file, 'r') as file:
         lines = file.readlines()
