@@ -13,7 +13,6 @@ _deps
 CMakeUserPresets.json
 /build
 /.vscode
-/utils
 /_example
 /dist
 .hintrc
@@ -120,4 +119,5 @@ dkms.conf
 /doc/latex
 /depr
 /bkp
-src/build_info.h
+/utils/build_info.txt
+/utils/auto_list.py
