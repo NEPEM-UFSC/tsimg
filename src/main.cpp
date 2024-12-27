@@ -32,7 +32,6 @@ std::string concatenateStrings(const std::vector<std::string>& vec) {
 
 std::string readFileToString(const std::string& filepath, bool debug) {
     if (debug) std::cout << "Reading file: " << filepath << std::endl;
-    
     std::ifstream file(filepath);
     if (!file.is_open()) {
         std::cerr << "Error while trying to open the template file: " << filepath << std::endl;
@@ -63,9 +62,9 @@ nlohmann::json read_json_file(const std::string& filename, bool debug) {
     return json_data;
 }
 
-std::string help_text = "...";
-std::string helpBadgeURL = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGNsYXNzPSJsdWNpZGUgbHVjaWRlLWNpcmNsZS1oZWxwIj48Y2lyY2xlIGN4PSIxMiIgY3k9IjEyIiByPSIxMCIvPjxwYXRoIGQ9Ik05LjA5IDlhMyAzIDAgMCAxIDUuODMgMWMwIDItMyAzLTMgMyIvPjxwYXRoIGQ9Ik0xMiAxN2guMDEiLz48L3N2Zz4=";
-std::string helpLink = "https://github.com/NEPEM-UFSC/tsimg";
+std::string help_text;
+std::string help_badge_url;
+std::string help_link;
 
 bool app_info = false;
 
@@ -103,6 +102,9 @@ void display_info() {
     std::cerr << "  --config <config.json>   Path to JSON config file (optional)." << std::endl;
     std::cerr << "  --labelbyname           Generate labels from image names (optional)." << std::endl;
     std::cerr << "  -author_image <author_image_path>   Path to author image (optional)." << std::endl;
+    std::cerr << "  -help_text <text>       Help text to display (optional)." << std::endl;
+    std::cerr << "  -help_link <link>       Help link URL (optional)." << std::endl;
+    std::cerr << "  -help_badge_url <url>   Help badge image URL (optional)." << std::endl;
 }
 
 int main(int argc, char* argv[]) {
@@ -144,6 +146,12 @@ int main(int argc, char* argv[]) {
             createLabelsFromImages = true;
         } else if (std::strcmp(argv[i], "-authorimage") == 0 && i + 1 < argc) {
             author_image_path = argv[++i];
+        } else if (std::strcmp(argv[i], "-help_text") == 0 && i + 1 < argc) {
+            help_text = argv[++i];
+        } else if (std::strcmp(argv[i], "-help_link") == 0 && i + 1 < argc) {
+            help_link = argv[++i];
+        } else if (std::strcmp(argv[i], "-help_badge_url") == 0 && i + 1 < argc) {
+            help_badge_url = argv[++i];
         } else if (std::strncmp(argv[i], "-2", 2) == 0 && i + 1 < argc) {
             imagePathsExtras.push_back(split(argv[++i], ','));
         } else if (std::strncmp(argv[i], "-3", 2) == 0 && i + 1 < argc) {
@@ -159,11 +167,12 @@ int main(int argc, char* argv[]) {
             output_filename = config.value("output_filename", "output.html");
             labels = config.value("labels", std::vector<std::string>{});
             std::string title = config.value("title", "SPICE Presentation");
-            std::string help_text = config.value("help_text", "");
-            std::string help_link = config.value("help_link", "");
-            std::string help_badge_url = config.value("help_badge_url", "");
-            std::string author_image = config.value("author_image", "");
             std::string main_text = config.value("main_text", "This is generated from a JSON config.");
+
+            help_text = config.value("help_text", "");
+            help_link = config.value("help_link", "");
+            help_badge_url = config.value("help_badge_url", "");
+            std::string author_image = config.value("author_image", "");
 
             std::map<std::string, ImageList> imageLists;
             for (int i = 0; ; ++i) {
@@ -232,7 +241,9 @@ int main(int argc, char* argv[]) {
                 builder.generateLabelsFromImages();
             }
             builder.addLabels(labels);
-            builder.setHelp(help_text, helpLink, helpBadgeURL);
+            if (!help_text.empty() && !help_link.empty() && !help_badge_url.empty()) {
+                builder.setHelp(help_text, help_link, help_badge_url);
+            }
             if (!author_image_path.empty()) {
                 builder.setAuthorImage(author_image_path);
             }

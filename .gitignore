@@ -14,7 +14,7 @@ CMakeUserPresets.json
 /build
 /.vscode
 /utils
-/example
+/_example
 /dist
 .hintrc
 
