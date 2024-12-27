@@ -117,6 +117,10 @@ int main(int argc, char* argv[]) {
 
     std::vector<std::vector<std::string>> imagePathsExtras;
 
+    std::string help_text;
+    std::string help_link;
+    std::string help_badge_url;
+
     if (argc == 1) {
         display_info();
         return 1;
@@ -159,11 +163,12 @@ int main(int argc, char* argv[]) {
             output_filename = config.value("output_filename", "output.html");
             labels = config.value("labels", std::vector<std::string>{});
             std::string title = config.value("title", "SPICE Presentation");
-            std::string help_text = config.value("help_text", "");
-            std::string help_link = config.value("help_link", "");
-            std::string help_badge_url = config.value("help_badge_url", "");
-            std::string author_image = config.value("author_image", "");
             std::string main_text = config.value("main_text", "This is generated from a JSON config.");
+
+            help_text = config.value("help_text", "");
+            help_link = config.value("help_link", "");
+            help_badge_url = config.value("help_badge_url", "");
+            std::string author_image = config.value("author_image", "");
 
             std::map<std::string, ImageList> imageLists;
             for (int i = 0; ; ++i) {
@@ -232,7 +237,9 @@ int main(int argc, char* argv[]) {
                 builder.generateLabelsFromImages();
             }
             builder.addLabels(labels);
-            builder.setHelp(help_text, helpLink, helpBadgeURL);
+            if (!help_text.empty() && !help_link.empty() && !help_badge_url.empty()) {
+                builder.setHelp(help_text, help_link, help_badge_url);
+            }
             if (!author_image_path.empty()) {
                 builder.setAuthorImage(author_image_path);
             }
