@@ -36,7 +36,7 @@ std::string readFileToString(const std::string& filepath, bool debug) {
     
     std::ifstream file(filepath);
     if (!file.is_open()) {
-        std::cerr << "Erro ao abrir o arquivo de template: " << filepath << std::endl;
+        std::cerr << "Error while trying to open the template file: " << filepath << std::endl;
         return "";
     }
     std::stringstream buffer;
@@ -64,7 +64,7 @@ nlohmann::json read_json_file(const std::string& filename, bool debug) {
     return json_data;
 }
 
-std::string help_text = "Mais informações disponíveis no botão abaixo.";
+std::string help_text = "...";
 std::string helpBadgeURL = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGNsYXNzPSJsdWNpZGUgbHVjaWRlLWNpcmNsZS1oZWxwIj48Y2lyY2xlIGN4PSIxMiIgY3k9IjEyIiByPSIxMCIvPjxwYXRoIGQ9Ik05LjA5IDlhMyAzIDAgMCAxIDUuODMgMWMwIDItMyAzLTMgMyIvPjxwYXRoIGQ9Ik0xMiAxN2guMDEiLz48L3N2Zz4=";
 std::string helpLink = "https://github.com/NEPEM-UFSC/tsimg";
 
@@ -105,9 +105,6 @@ void display_info() {
     std::cerr << "  --labelbyname           Generate labels from image names (optional)." << std::endl;
     std::cerr << "  -author_image <author_image_path>   Path to author image (optional)." << std::endl;
 }
-
-//TODO Implementar funcionalidade de vs(dupla imagelist) para o CLI
-//TODO Verificar a fundo funcionamento e identificar problemas
 
 int main(int argc, char* argv[]) {
     std::string output_filename;
@@ -246,7 +243,7 @@ int main(int argc, char* argv[]) {
                     builder.addImageToList(tag, img);
                 }
             }
-            TemplateWriter writer("new_template.html", debug);
+            TemplateWriter writer("template_vs.html", debug);
             writer.writeToFile(output_filename, builder.getContents(), builder.getImageLists(), builder.getLabels(), builder.getAuthorImageBase64());
         } else if (format == "gif") {
             if (!createGif(output_filename, image_paths, debug)) {

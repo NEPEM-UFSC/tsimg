@@ -191,14 +191,6 @@ const std::string& SPICEBuilder::getTitle() const {
     return title;
 }
 
-std::string SPICEBuilder::getImageTags() const {
-    std::string imageTags;
-    for (const auto& imageList : imageLists) {
-        imageTags += imageList.second.generateImageTags();
-    }
-    return imageTags;
-}
-
 std::string SPICEBuilder::generateImageTags() const {
     std::string imageTags;
     for (const auto& imageList : imageLists) {
