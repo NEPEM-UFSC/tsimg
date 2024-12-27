@@ -1,0 +1,38 @@
+# Definir arquivos de texto
+* text=auto
+
+# Definir arquivos HTML como não detectáveis pelo linguist
+*.html linguist-detectable=false
+
+# Definir arquivos binários
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.exe binary
+*.dll binary
+*.so binary
+*.dylib binary
+*.a binary
+*.lib binary
+*.obj binary
+*.o binary
+
+# Definir arquivos de configuração do CMake como texto
+CMakeLists.txt text
+*.cmake text
+
+# Definir arquivos de configuração do Visual Studio Code como texto
+.vscode/* text
+
+# Definir arquivos de build como binários
+build/* binary
+
+# Definir arquivos de backup como binários
+bkp/* binary
+
+# Definir arquivos de documentação como texto
+doc/* text
+
+# Definir arquivos de terceiros como binários
+third_party/* binary
