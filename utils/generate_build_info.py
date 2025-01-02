@@ -4,8 +4,16 @@ from datetime import datetime
 
 print("GBI - EVOKED ")
 print("Generating build info...")
-build_info_file = '../utils/build_info.txt'
-version_file = '../version.rc'
+
+# Defina os caminhos relativos
+build_info_file = '../tsimg/utils/build_info.txt'
+version_file = '../tsimg/version.rc'
+header_file_path = '../tsimg/src/build_info.h'
+
+# Converta os caminhos relativos para caminhos absolutos
+build_info_file = os.path.abspath(build_info_file)
+version_file = os.path.abspath(version_file)
+header_file_path = os.path.abspath(header_file_path)
 
 # Ensure the directory exists
 os.makedirs(os.path.dirname(build_info_file), exist_ok=True)
@@ -49,10 +57,8 @@ except Exception as e:
     print('Failed to generate build info')
     exit(1)
 
-os.makedirs('src', exist_ok=True)
+os.makedirs(os.path.dirname(header_file_path), exist_ok=True)
 
-# Print the path to the header file
-header_file_path = '../src/build_info.h'
 header_content = f'#pragma once\n\n#define BUILD_INFO "Version: {version}\\nMicroversion: {microversion}\\nBuild Number: {build_number}\\nBuild Date: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}"\n'
 
 try:
