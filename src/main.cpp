@@ -108,6 +108,74 @@ void display_info() {
 }
 
 int main(int argc, char* argv[]) {
+    if (argc == 1) {
+        // Modo Interativo
+        app_info = true;
+        display_info();
+
+        std::cout << "Por favor, insira os parâmetros necessários." << std::endl;
+
+        std::string output_filename;
+        std::string images_input;
+        std::string labels_input;
+        std::string format = "spice";
+        bool debug = false;
+        std::string json_config_file;
+
+        std::cout << "Nome do arquivo de saída: ";
+        std::getline(std::cin, output_filename);
+
+        std::cout << "Caminhos das imagens (separados por vírgula): ";
+        std::getline(std::cin, images_input);
+        std::vector<std::string> image_paths = split(images_input, ',');
+
+        std::cout << "Labels (opcional, separados por vírgula): ";
+        std::getline(std::cin, labels_input);
+        std::vector<std::string> labels = split(labels_input, ',');
+
+        std::cout << "Formato de exportação ('spice' ou 'gif', padrão: 'spice'): ";
+        std::string format_input;
+        std::getline(std::cin, format_input);
+        if (!format_input.empty()) {
+            format = format_input;
+        }
+
+        std::cout << "Ativar modo debug? (s/n): ";
+        std::string debug_input;
+        std::getline(std::cin, debug_input);
+        if (debug_input == "s" || debug_input == "S") {
+            debug = true;
+        }
+
+        // Processamento dos dados de entrada
+        try {
+            if (format == "spice") {
+                SPICEBuilder builder("Interactive Mode", debug);
+                builder.addTitle("Interactive TSIMG");
+                for (const auto& img : image_paths) {
+                    builder.addImage(img);
+                }
+                builder.addLabels(labels);
+                TemplateWriter writer("template_vs.html", debug);
+                writer.writeToFile(output_filename, builder.getContents(), builder.getImageLists(), builder.getLabels(), builder.getAuthorImageBase64());
+                std::cout << "Arquivo SPICE gerado com sucesso: " << output_filename << std::endl;
+            } else if (format == "gif") {
+                if (createGif(output_filename, image_paths, debug)) {
+                    std::cout << "Arquivo GIF gerado com sucesso: " << output_filename << std::endl;
+                } else {
+                    std::cerr << "Falha ao criar o arquivo GIF: " << output_filename << std::endl;
+                }
+            } else {
+                std::cerr << "Formato não suportado: " << format << std::endl;
+                return 1;
+            }
+        } catch (const std::exception& e) {
+            std::cerr << "Erro durante o processamento: " << e.what() << std::endl;
+            return 1;
+        }
+
+        return 0;
+    }
     std::string output_filename;
     std::vector<std::string> image_paths;
     std::vector<std::string> labels;
@@ -118,11 +186,6 @@ int main(int argc, char* argv[]) {
     std::string author_image_path;
 
     std::vector<std::vector<std::string>> imagePathsExtras;
-
-    if (argc == 1) {
-        display_info();
-        return 1;
-    }
 
     for (int i = 1; i < argc; ++i) {
         if (std::strcmp(argv[i], "-info") == 0) {
