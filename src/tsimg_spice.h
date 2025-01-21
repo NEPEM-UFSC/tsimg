@@ -110,3 +110,8 @@ private:
 };
 
 std::string encodeImageToBase64(const std::string& imagePath, bool debug);
+
+// Adicionar após as outras declarações
+bool isValidImageFormat(const std::string& filepath);
+bool isFileReadable(const std::string& filepath);
+bool validateImagePath(const std::string& filepath, bool debug = false);

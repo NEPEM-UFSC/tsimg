@@ -107,6 +107,47 @@ void display_info() {
     std::cerr << "  -help_badge_url <url>   Help badge image URL (optional)." << std::endl;
 }
 
+bool validateJsonConfig(const nlohmann::json& config, bool debug) {
+    // Verificar campos obrigatórios
+    const std::vector<std::string> required = {"export_format", "output_filename"};
+    for (const auto& field : required) {
+        if (!config.contains(field)) {
+            if (debug) std::cerr << "Error: Missing required field in JSON config: " << field << std::endl;
+            return false;
+        }
+    }
+    
+    // Validar formato de exportação
+    std::string format = config["export_format"];
+    if (format != "spice" && format != "gif") {
+        if (debug) std::cerr << "Error: Invalid export format in config: " << format << std::endl;
+        return false;
+    }
+    
+    // Validar imagens se presentes
+    for (int i = 0; ; ++i) {
+        std::string key = "images" + (i == 0 ? "" : "_" + std::to_string(i));
+        if (!config.contains(key)) break;
+        
+        if (!config[key].is_array()) {
+            if (debug) std::cerr << "Error: " << key << " must be an array" << std::endl;
+            return false;
+        }
+        
+        for (const auto& img : config[key]) {
+            if (!img.is_string()) {
+                if (debug) std::cerr << "Error: Image path must be a string" << std::endl;
+                return false;
+            }
+            if (!validateImagePath(img, debug)) {
+                return false;
+            }
+        }
+    }
+    
+    return true;
+}
+
 int main(int argc, char* argv[]) {
     if (argc == 1) {
         // Modo Interativo
@@ -226,6 +267,11 @@ int main(int argc, char* argv[]) {
         try {
             nlohmann::json config = read_json_file(json_config_file, debug);
             
+            if (!validateJsonConfig(config, debug)) {
+                std::cerr << "Invalid JSON configuration file" << std::endl;
+                return 1;
+            }
+            
             format = config.value("export_format", "spice");
             output_filename = config.value("output_filename", "output.html");
             labels = config.value("labels", std::vector<std::string>{});
@@ -292,6 +338,24 @@ int main(int argc, char* argv[]) {
         if (output_filename.empty() || image_paths.empty()) {
             display_info();
             return 1;
+        }
+
+        // Validar caminhos de imagem em modo CLI
+        for (const auto& img : image_paths) {
+            if (!validateImagePath(img, debug)) {
+                std::cerr << "Invalid image file: " << img << std::endl;
+                return 1;
+            }
+        }
+        
+        // Validar caminhos de imagem extras
+        for (const auto& extraList : imagePathsExtras) {
+            for (const auto& img : extraList) {
+                if (!validateImagePath(img, debug)) {
+                    std::cerr << "Invalid image file in extra list: " << img << std::endl;
+                    return 1;
+                }
+            }
         }
 
         if (format == "spice") {

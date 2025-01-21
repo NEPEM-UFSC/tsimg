@@ -4,6 +4,7 @@
 #include <sstream>
 #include <filesystem>
 #include <stdexcept>
+#include <algorithm>  // Adicionado para std::transform
 
 SpiceContent::SpiceContent(const std::string& tag, const std::string& baseHtml, const std::string& variableContent)
     : tag(tag), baseHtml(baseHtml), variableContent(variableContent) {}
@@ -91,14 +92,49 @@ SPICEBuilder::SPICEBuilder(const std::string& title, bool debug)
     }
 }
 
+bool isValidImageFormat(const std::string& filepath) {
+    std::string ext = std::filesystem::path(filepath).extension().string();
+    std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+    return ext == ".jpg" || ext == ".jpeg" || ext == ".png" || ext == ".gif" || ext == ".bmp";
+}
+
+bool isFileReadable(const std::string& filepath) {
+    std::ifstream file(filepath);
+    return file.good();
+}
+
+bool validateImagePath(const std::string& filepath, bool debug) {
+    if (!std::filesystem::exists(filepath)) {
+        if (debug) std::cerr << "Error: File does not exist: " << filepath << std::endl;
+        return false;
+    }
+    
+    if (!isFileReadable(filepath)) {
+        if (debug) std::cerr << "Error: File is not readable: " << filepath << std::endl;
+        return false;
+    }
+    
+    if (!isValidImageFormat(filepath)) {
+        if (debug) std::cerr << "Error: Invalid image format: " << filepath << std::endl;
+        return false;
+    }
+    
+    return true;
+}
+
 SPICEBuilder& SPICEBuilder::addImage(const std::string& imagePath) {
     if (debug) std::cout << "Adding image to SPICE_IMAGES: " << imagePath << std::endl;
+    
+    if (!validateImagePath(imagePath, debug)) {
+        throw std::runtime_error("Invalid image file: " + imagePath);
+    }
+    
     std::string base64Image = encodeImageToBase64(imagePath, debug);
     if (!base64Image.empty()) {
         imageLists["SPICE_IMAGES"].addImage(Image(imagePath, base64Image));
         if (debug) std::cout << "Image added successfully: " << imagePath << std::endl;
     } else {
-        if (debug) std::cerr << "Failed to add image: " << imagePath << std::endl;
+        throw std::runtime_error("Failed to encode image: " + imagePath);
     }
     return *this;
 }
