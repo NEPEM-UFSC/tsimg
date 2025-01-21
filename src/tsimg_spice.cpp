@@ -6,6 +6,21 @@
 #include <stdexcept>
 #include <algorithm>  // Adicionado para std::transform
 
+// Adicionar função helper para debug logging
+namespace {
+    void debugLog(bool debug, const std::string& message) {
+        if (debug) {
+            std::cout << "[DEBUG] " << message << std::endl;
+        }
+    }
+
+    void errorLog(bool debug, const std::string& message) {
+        if (debug) {
+            std::cerr << "[ERROR] " << message << std::endl;
+        }
+    }
+}
+
 SpiceContent::SpiceContent(const std::string& tag, const std::string& baseHtml, const std::string& variableContent)
     : tag(tag), baseHtml(baseHtml), variableContent(variableContent) {}
 
@@ -103,38 +118,51 @@ bool isFileReadable(const std::string& filepath) {
     return file.good();
 }
 
+// Melhorar validateImagePath
 bool validateImagePath(const std::string& filepath, bool debug) {
-    if (!std::filesystem::exists(filepath)) {
-        if (debug) std::cerr << "Error: File does not exist: " << filepath << std::endl;
+    try {
+        if (!std::filesystem::exists(filepath)) {
+            errorLog(debug, "File does not exist: " + filepath);
+            return false;
+        }
+        
+        if (!isFileReadable(filepath)) {
+            errorLog(debug, "File is not readable or permission denied: " + filepath);
+            return false;
+        }
+        
+        if (!isValidImageFormat(filepath)) {
+            errorLog(debug, "Invalid image format. Supported formats: jpg, jpeg, png, gif, bmp. File: " + filepath);
+            return false;
+        }
+        
+        debugLog(debug, "Image validation successful: " + filepath);
+        return true;
+    } catch (const std::exception& e) {
+        errorLog(debug, "Exception during image validation: " + std::string(e.what()) + " for file: " + filepath);
         return false;
     }
-    
-    if (!isFileReadable(filepath)) {
-        if (debug) std::cerr << "Error: File is not readable: " << filepath << std::endl;
-        return false;
-    }
-    
-    if (!isValidImageFormat(filepath)) {
-        if (debug) std::cerr << "Error: Invalid image format: " << filepath << std::endl;
-        return false;
-    }
-    
-    return true;
 }
 
+// Melhorar SPICEBuilder::addImage
 SPICEBuilder& SPICEBuilder::addImage(const std::string& imagePath) {
-    if (debug) std::cout << "Adding image to SPICE_IMAGES: " << imagePath << std::endl;
+    debugLog(debug, "Adding image to SPICE_IMAGES: " + imagePath);
     
-    if (!validateImagePath(imagePath, debug)) {
-        throw std::runtime_error("Invalid image file: " + imagePath);
-    }
-    
-    std::string base64Image = encodeImageToBase64(imagePath, debug);
-    if (!base64Image.empty()) {
+    try {
+        if (!validateImagePath(imagePath, debug)) {
+            throw std::runtime_error("Image validation failed for: " + imagePath);
+        }
+        
+        std::string base64Image = encodeImageToBase64(imagePath, debug);
+        if (base64Image.empty()) {
+            throw std::runtime_error("Base64 encoding failed for: " + imagePath);
+        }
+        
         imageLists["SPICE_IMAGES"].addImage(Image(imagePath, base64Image));
-        if (debug) std::cout << "Image added successfully: " << imagePath << std::endl;
-    } else {
-        throw std::runtime_error("Failed to encode image: " + imagePath);
+        debugLog(debug, "Image added successfully: " + imagePath);
+    } catch (const std::exception& e) {
+        errorLog(debug, "Failed to add image: " + std::string(e.what()));
+        throw; // Re-throw para permitir tratamento em nível superior
     }
     return *this;
 }
@@ -261,94 +289,98 @@ TemplateWriter::TemplateWriter(const std::string& templatePath, bool debug) : te
     templateContent = readFileToString(templatePath);
 }
 
+// Melhorar TemplateWriter::writeToFile
 void TemplateWriter::writeToFile(const std::string& outputFile, 
                                  const std::vector<SpiceContent>& contents, 
                                  const std::map<std::string, ImageList>& imageLists, 
                                  const std::vector<std::string>& labels, 
                                  const std::string& authorImageBase64) {
-    if (debug) {
-        std::cout << "Starting writeToFile with outputFile: " << outputFile << std::endl;
-    }
+    debugLog(debug, "Starting writeToFile process for: " + outputFile);
 
-    if (contents.empty()) {
-        if (debug) std::cerr << "Error: No contents available to write to the file." << std::endl;
-        return;
-    }
-    if (imageLists.empty()) {
-        if (debug) std::cerr << "Error: No image lists available to write to the file." << std::endl;
-        return;
-    }
-    if (!validateImageListAndLabels(imageLists, labels)) {
-        if (debug) {
-            std::cerr << "Validation failed: The number of images and labels must be the same." << std::endl;
+    try {
+        if (contents.empty()) {
+            throw std::runtime_error("No contents available to write");
         }
-        return;
-    }
-
-    std::string outputContent = templateContent;
-    outputContent = replaceAllTags(outputContent, contents);
-    outputContent = replaceObjectPlaceholders(outputContent, imageLists);
-    std::string authorImageTag = authorImageBase64.empty() ? "" : "data:image/png;base64," + authorImageBase64;
-    outputContent = replaceTag(outputContent, "<SPICE_AUTHOR_IMAGE>", authorImageTag);
-
-    if (authorImageTag.empty()) {
-        outputContent = replaceTag(outputContent, "<SPICE_AUTHOR_IMAGE>", "");
-    }
-
-    std::string labelTags;
-    for (const auto& label : labels) {
-        labelTags += "<span>" + label + "</span>";
-    }
-    outputContent = replaceTag(outputContent, "<SPICE_LABELS>", labelTags);
-
-    std::string helpSection = "";
-    std::string helpTextTag = "";
-    std::string helpContentTag = "";
-
-    for (const auto& content : contents) {
-        if (content.getTag() == "SPICE_HELP_TEXT") {
-            helpTextTag = content.getVariableContent();
-        } else if (content.getTag() == "SPICE_HELP_CONTENT") {
-            helpContentTag = content.getVariableContent();
+        if (imageLists.empty()) {
+            throw std::runtime_error("No image lists available to write");
         }
-    }
+        if (!validateImageListAndLabels(imageLists, labels)) {
+            throw std::runtime_error("Image list and labels validation failed - counts must match");
+        }
 
-    if (!helpTextTag.empty() && !helpContentTag.empty()) {
-        helpSection = "<div class=\"help-button-container\">\n"
-                    "    <div class=\"help-text\">\n"
-                    "        " + helpTextTag + "\n"
-                    "    </div>\n"
-                    "    <div class=\"help-badge\">\n"
-                    "        " + helpContentTag + "\n"
-                    "    </div>\n"
-                    "</div>";
-    } else if (!helpContentTag.empty()) {
-        helpSection = "<div class=\"help-button-container\">\n"
-                    "    <div class=\"help-badge\">\n"
-                    "        " + helpContentTag + "\n"
-                    "    </div>\n"
-                    "</div>";
-    }
+        std::string outputContent = templateContent;
+        debugLog(debug, "Processing template content...");
+        
+        outputContent = replaceAllTags(outputContent, contents);
+        debugLog(debug, "Tags replacement completed");
+        
+        outputContent = replaceObjectPlaceholders(outputContent, imageLists);
+        debugLog(debug, "Object placeholders replacement completed");
 
-    helpSection.erase(helpSection.find_last_not_of(" \n\r\t") + 1);
-    helpSection.erase(0, helpSection.find_first_not_of(" \n\r\t"));
+        std::string authorImageTag = authorImageBase64.empty() ? "" : "data:image/png;base64," + authorImageBase64;
+        outputContent = replaceTag(outputContent, "<SPICE_AUTHOR_IMAGE>", authorImageTag);
 
-    if (helpSection.empty()) {
-        outputContent = replaceTag(outputContent, "<SPICE_HELP_SECTION>", "");
-    } else {
-        outputContent = replaceTag(outputContent, "<SPICE_HELP_SECTION>", helpSection);
-    }
+        if (authorImageTag.empty()) {
+            outputContent = replaceTag(outputContent, "<SPICE_AUTHOR_IMAGE>", "");
+        }
 
-    std::ofstream outFile(outputFile);
-    if (!outFile.is_open()) {
-        if (debug) std::cerr << "Error: Could not open output file: " << outputFile << std::endl;
-        return;
-    }
-    outFile << outputContent;
-    outFile.close();
+        std::string labelTags;
+        for (const auto& label : labels) {
+            labelTags += "<span>" + label + "</span>";
+        }
+        outputContent = replaceTag(outputContent, "<SPICE_LABELS>", labelTags);
 
-    if (debug) {
-        std::cout << "Output file written to: " << outputFile << std::endl;
+        std::string helpSection = "";
+        std::string helpTextTag = "";
+        std::string helpContentTag = "";
+
+        for (const auto& content : contents) {
+            if (content.getTag() == "SPICE_HELP_TEXT") {
+                helpTextTag = content.getVariableContent();
+            } else if (content.getTag() == "SPICE_HELP_CONTENT") {
+                helpContentTag = content.getVariableContent();
+            }
+        }
+
+        if (!helpTextTag.empty() && !helpContentTag.empty()) {
+            helpSection = "<div class=\"help-button-container\">\n"
+                        "    <div class=\"help-text\">\n"
+                        "        " + helpTextTag + "\n"
+                        "    </div>\n"
+                        "    <div class=\"help-badge\">\n"
+                        "        " + helpContentTag + "\n"
+                        "    </div>\n"
+                        "</div>";
+        } else if (!helpContentTag.empty()) {
+            helpSection = "<div class=\"help-button-container\">\n"
+                        "    <div class=\"help-badge\">\n"
+                        "        " + helpContentTag + "\n"
+                        "    </div>\n"
+                        "</div>";
+        }
+
+        helpSection.erase(helpSection.find_last_not_of(" \n\r\t") + 1);
+        helpSection.erase(0, helpSection.find_first_not_of(" \n\r\t"));
+
+        if (helpSection.empty()) {
+            outputContent = replaceTag(outputContent, "<SPICE_HELP_SECTION>", "");
+        } else {
+            outputContent = replaceTag(outputContent, "<SPICE_HELP_SECTION>", helpSection);
+        }
+
+        std::ofstream outFile(outputFile);
+        if (!outFile.is_open()) {
+            throw std::runtime_error("Could not open output file for writing: " + outputFile);
+        }
+        
+        outFile << outputContent;
+        outFile.close();
+        
+        debugLog(debug, "File written successfully: " + outputFile);
+        
+    } catch (const std::exception& e) {
+        errorLog(debug, "Error in writeToFile: " + std::string(e.what()));
+        throw; // Re-throw para permitir tratamento em nível superior
     }
 }
 
@@ -395,18 +427,33 @@ std::string TemplateWriter::readFileToString(const std::string& filePath) {
     return buffer;
 }
 
+// Melhorar replaceTag com validação mais robusta
 std::string TemplateWriter::replaceTag(const std::string& source, const std::string& tag, const std::string& replacement) {
-    std::string result = source;
-    size_t pos = result.find(tag);
-    if (pos == std::string::npos) {
-        if (debug) std::cerr << "DEBUG: Placeholder not found: " + tag << " - Ignoring this section." << std::endl;
+    try {
+        if (tag.empty()) {
+            throw std::invalid_argument("Empty tag provided");
+        }
+
+        std::string result = source;
+        size_t pos = result.find(tag);
+        
+        if (pos == std::string::npos) {
+            debugLog(debug, "Tag not found in template: " + tag);
+            return result;
+        }
+
+        while (pos != std::string::npos) {
+            result.replace(pos, tag.length(), replacement);
+            pos = result.find(tag, pos + replacement.length());
+        }
+
+        debugLog(debug, "Tag replaced successfully: " + tag);
         return result;
+        
+    } catch (const std::exception& e) {
+        errorLog(debug, "Error replacing tag " + tag + ": " + std::string(e.what()));
+        throw;
     }
-    while (pos != std::string::npos) {
-        result.replace(pos, tag.length(), replacement);
-        pos = result.find(tag, pos + replacement.length());
-    }
-    return result;
 }
 
 bool TemplateWriter::validateImageListAndLabels(const std::map<std::string, ImageList>& imageLists, const std::vector<std::string>& labels) {
