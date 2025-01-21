@@ -265,10 +265,10 @@ void TemplateWriter::writeToFile(const std::string& outputFile,
     }
     outputContent = replaceTag(outputContent, "<SPICE_LABELS>", labelTags);
 
-
     std::string helpSection = "";
     std::string helpTextTag = "";
     std::string helpContentTag = "";
+
     for (const auto& content : contents) {
         if (content.getTag() == "SPICE_HELP_TEXT") {
             helpTextTag = content.getVariableContent();
@@ -276,20 +276,31 @@ void TemplateWriter::writeToFile(const std::string& outputFile,
             helpContentTag = content.getVariableContent();
         }
     }
+
     if (!helpTextTag.empty() && !helpContentTag.empty()) {
         helpSection = "<div class=\"help-button-container\">\n"
-                      "    <div class=\"help-text\">\n"
-                      "        " + helpTextTag + "\n"
-                      "    </div>\n"
-                      "    <div class=\"help-badge\">\n"
-                      "        " + helpContentTag + "\n"
-                      "    </div>\n"
-                      "</div>";
+                    "    <div class=\"help-text\">\n"
+                    "        " + helpTextTag + "\n"
+                    "    </div>\n"
+                    "    <div class=\"help-badge\">\n"
+                    "        " + helpContentTag + "\n"
+                    "    </div>\n"
+                    "</div>";
+    } else if (!helpContentTag.empty()) {
+        helpSection = "<div class=\"help-button-container\">\n"
+                    "    <div class=\"help-badge\">\n"
+                    "        " + helpContentTag + "\n"
+                    "    </div>\n"
+                    "</div>";
     }
-    outputContent = replaceTag(outputContent, "<SPICE_HELP_SECTION>", helpSection);
+
+    helpSection.erase(helpSection.find_last_not_of(" \n\r\t") + 1);
+    helpSection.erase(0, helpSection.find_first_not_of(" \n\r\t"));
 
     if (helpSection.empty()) {
         outputContent = replaceTag(outputContent, "<SPICE_HELP_SECTION>", "");
+    } else {
+        outputContent = replaceTag(outputContent, "<SPICE_HELP_SECTION>", helpSection);
     }
 
     std::ofstream outFile(outputFile);
