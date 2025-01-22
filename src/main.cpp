@@ -10,6 +10,9 @@
 #include "tsimg_gif.h"
 #include "build_info.h"
 
+const std::string DEFAULT_TITLE = "TSIMG Presentation";
+const std::string APP_NAME = "Temporal Series Interactive Imager";
+
 std::vector<std::string> split(const std::string& str, char delimiter) {
     std::vector<std::string> tokens;
     std::string token;
@@ -139,7 +142,8 @@ bool validateJsonConfig(const nlohmann::json& config, bool debug) {
                 if (debug) std::cerr << "Error: Image path must be a string" << std::endl;
                 return false;
             }
-            if (!validateImagePath(img, debug)) {
+            // Usar a função do namespace
+            if (!tsimg::utils::ImageValidator::validateImagePath(img, debug)) {
                 return false;
             }
         }
@@ -162,6 +166,14 @@ int main(int argc, char* argv[]) {
         std::string format = "spice";
         bool debug = false;
         std::string json_config_file;
+        std::string title;  // Novo campo para título
+
+        // Adicionar prompt para título
+        std::cout << "Título da apresentação (pressione Enter para usar o padrão): ";
+        std::getline(std::cin, title);
+        if (title.empty()) {
+            title = DEFAULT_TITLE;
+        }
 
         std::cout << "Nome do arquivo de saída: ";
         std::getline(std::cin, output_filename);
@@ -191,8 +203,8 @@ int main(int argc, char* argv[]) {
         // Processamento dos dados de entrada
         try {
             if (format == "spice") {
-                SPICEBuilder builder("Interactive Mode", debug);
-                builder.addTitle("Interactive TSIMG");
+                SPICEBuilder builder(title, debug);
+                builder.addTitle(title);  // Usar o mesmo título
                 for (const auto& img : image_paths) {
                     builder.addImage(img);
                 }
@@ -275,7 +287,7 @@ int main(int argc, char* argv[]) {
             format = config.value("export_format", "spice");
             output_filename = config.value("output_filename", "output.html");
             labels = config.value("labels", std::vector<std::string>{});
-            std::string title = config.value("title", "SPICE Presentation");
+            std::string title = config.value("title", DEFAULT_TITLE);  // Usar título padrão
             std::string main_text = config.value("main_text", "This is generated from a JSON config.");
 
             help_text = config.value("help_text", "");
@@ -307,7 +319,7 @@ int main(int argc, char* argv[]) {
                 }
             } else if (format == "spice") {
                 SPICEBuilder builder(title, debug);
-                builder.addTitle(title);
+                builder.addTitle(title);  // Consistência no uso do título
                 builder.addContent("SPICE_TEXT", main_text);
                 if (createLabelsFromImages) {
                     builder.generateLabelsFromImages();
@@ -342,7 +354,7 @@ int main(int argc, char* argv[]) {
 
         // Validar caminhos de imagem em modo CLI
         for (const auto& img : image_paths) {
-            if (!validateImagePath(img, debug)) {
+            if (!tsimg::utils::ImageValidator::validateImagePath(img, debug)) {
                 std::cerr << "Invalid image file: " << img << std::endl;
                 return 1;
             }
@@ -351,7 +363,7 @@ int main(int argc, char* argv[]) {
         // Validar caminhos de imagem extras
         for (const auto& extraList : imagePathsExtras) {
             for (const auto& img : extraList) {
-                if (!validateImagePath(img, debug)) {
+                if (!tsimg::utils::ImageValidator::validateImagePath(img, debug)) {
                     std::cerr << "Invalid image file in extra list: " << img << std::endl;
                     return 1;
                 }
@@ -359,8 +371,8 @@ int main(int argc, char* argv[]) {
         }
 
         if (format == "spice") {
-            SPICEBuilder builder("CLI Title", debug);
-            builder.addTitle("CLI Title");
+            SPICEBuilder builder(DEFAULT_TITLE, debug);  // Usar título padrão
+            builder.addTitle(DEFAULT_TITLE);
             for (const auto& img : image_paths) {
                 builder.addImage(img);
             }

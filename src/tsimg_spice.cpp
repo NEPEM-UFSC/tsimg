@@ -15,77 +15,157 @@ namespace tsimg::utils {
         if (debug) std::cerr << "[ERROR] " << message << std::endl;
     }
 
-    class FileHandler {
-    public:
-        static std::string readFile(const std::string& filepath, bool debug = false) {
+    std::string FileHandler::readFile(const std::string& filepath, bool debug) {
+        try {
+            validateFilePath(filepath);
             std::ifstream file(filepath, std::ios::in | std::ios::binary | std::ios::ate);
+            
             if (!file.is_open()) {
                 throw std::runtime_error("Could not open file: " + filepath);
             }
 
-            std::streamsize size = file.tellg();
-            file.seekg(0, std::ios::beg);
-
-            std::string buffer(size, '\0');
-            if (!file.read(&buffer[0], size)) {
-                throw std::runtime_error("Error reading file: " + filepath);
-            }
-
-            debugLog(debug, "File read successfully: " + filepath);
-            return buffer;
+            return readFileContent(file, filepath, debug);
         }
+        catch (const std::exception& e) {
+            errorLog(debug, std::string("Error reading file: ") + e.what());
+            throw;
+        }
+    }
 
-        static void writeFile(const std::string& filepath, const std::string& content, bool debug = false) {
+    void FileHandler::writeFile(const std::string& filepath, const std::string& content, bool debug) {
+        try {
+            validateFilePath(filepath);
+            createDirectoryIfNeeded(filepath);
+            
             std::ofstream file(filepath);
             if (!file.is_open()) {
                 throw std::runtime_error("Could not open file for writing: " + filepath);
             }
 
-            file << content;
-            file.close();
-
+            writeFileContent(file, content);
             debugLog(debug, "File written successfully: " + filepath);
         }
-
-        static bool isValidImageFormat(const std::string& filepath) {
-            std::string ext = std::filesystem::path(filepath).extension().string();
-            std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
-            return ext == ".jpg" || ext == ".jpeg" || ext == ".png" || ext == ".gif" || ext == ".bmp";
+        catch (const std::exception& e) {
+            errorLog(debug, std::string("Error writing file: ") + e.what());
+            throw;
         }
+    }
 
-        static bool isFileReadable(const std::string& filepath) {
+    bool FileHandler::isValidImageFormat(const std::string& filepath) {
+        static const std::vector<std::string> validExtensions = {
+            ".jpg", ".jpeg", ".png", ".gif", ".bmp"
+        };
+        
+        std::string ext = getFileExtension(filepath);
+        return std::find(validExtensions.begin(), validExtensions.end(), ext) != validExtensions.end();
+    }
+
+    bool FileHandler::isFileReadable(const std::string& filepath) {
+        try {
+            validateFilePath(filepath);
             std::ifstream file(filepath);
             return file.good();
         }
-    };
+        catch (...) {
+            return false;
+        }
+    }
 
-    class HTMLBuilder {
-    public:
-        static std::string createHelpSection(const std::string& helpText, const std::string& helpContent, const std::string& helpLink) {
-            if (helpText.empty() || helpContent.empty() || helpLink.empty()) {
-                return ""; // Retorna string vazia se faltar alguma informação
-            }
+    void FileHandler::validateFilePath(const std::string& filepath) {
+        if (filepath.empty()) {
+            throw std::invalid_argument("Empty file path");
+        }
+    }
 
-            std::ostringstream oss;
-            oss << "<div class=\"help-button-container\">\n";
-            oss << "    <div class=\"help-text\">\n"
-                << "        " << helpText << "\n"
-                << "    </div>\n"
-                << "    <div class=\"help-badge\">\n"
-                << "        " << helpContent << "\n"
-                << "    </div>\n"
-                << "</div>";
-            return oss.str();
+    void FileHandler::createDirectoryIfNeeded(const std::string& filepath) {
+        auto directory = std::filesystem::path(filepath).parent_path();
+        if (!directory.empty() && !std::filesystem::exists(directory)) {
+            std::filesystem::create_directories(directory);
+        }
+    }
+
+    std::string FileHandler::readFileContent(std::ifstream& file, const std::string& filepath, bool debug) {
+        std::streamsize size = file.tellg();
+        file.seekg(0, std::ios::beg);
+
+        std::string buffer(size, '\0');
+        if (!file.read(&buffer[0], size)) {
+            throw std::runtime_error("Error reading file content: " + filepath);
         }
 
-        static std::string createLabelTags(const std::vector<std::string>& labels) {
-            std::ostringstream oss;
-            for (const auto& label : labels) {
-                oss << "<span>" << label << "</span>";
-            }
-            return oss.str();
+        debugLog(debug, "File read successfully: " + filepath);
+        return buffer;
+    }
+
+    void FileHandler::writeFileContent(std::ofstream& file, const std::string& content) {
+        file << content;
+        file.close();
+        
+        if (file.fail()) {
+            throw std::runtime_error("Failed to write file content");
         }
-    };
+    }
+
+    std::string FileHandler::getFileExtension(const std::string& filepath) {
+        std::string ext = std::filesystem::path(filepath).extension().string();
+        std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+        return ext;
+    }
+
+    bool ImageValidator::validateImagePath(const std::string& filepath, bool debug) {
+        try {
+            if (!std::filesystem::exists(filepath)) {
+                errorLog(debug, "File does not exist: " + filepath);
+                return false;
+            }
+            
+            if (!FileHandler::isFileReadable(filepath)) {
+                errorLog(debug, "File is not readable or permission denied: " + filepath);
+                return false;
+            }
+            
+            if (!FileHandler::isValidImageFormat(filepath)) {
+                errorLog(debug, "Invalid image format. Supported formats: jpg, jpeg, png, gif, bmp. File: " + filepath);
+                return false;
+            }
+            
+            debugLog(debug, "Image validation successful: " + filepath);
+            return true;
+        } catch (const std::exception& e) {
+            errorLog(debug, "Exception during image validation: " + std::string(e.what()) + " for file: " + filepath);
+            return false;
+        }
+    }
+
+    // HTMLBuilder implementation
+    std::string HTMLBuilder::createHelpSection(
+        const std::string& helpText, 
+        const std::string& helpContent, 
+        const std::string& helpLink
+    ) {
+        if (helpText.empty() || helpContent.empty() || helpLink.empty()) {
+            return "";
+        }
+
+        std::ostringstream oss;
+        oss << "<div class=\"help-button-container\">\n";
+        oss << "    <div class=\"help-text\">\n"
+            << "        " << helpText << "\n"
+            << "    </div>\n"
+            << "    <div class=\"help-badge\">\n"
+            << "        " << helpContent << "\n"
+            << "    </div>\n"
+            << "</div>";
+        return oss.str();
+    }
+
+    std::string HTMLBuilder::createLabelTags(const std::vector<std::string>& labels) {
+        std::ostringstream oss;
+        for (const auto& label : labels) {
+            oss << "<span>" << label << "</span>";
+        }
+        return oss.str();
+    }
 }
 
 SpiceContent::SpiceContent(const std::string& tag, const std::string& baseHtml, const std::string& variableContent)
@@ -174,49 +254,21 @@ SPICEBuilder::SPICEBuilder(const std::string& title, bool debug)
     }
 }
 
-bool isValidImageFormat(const std::string& filepath) {
-    std::string ext = std::filesystem::path(filepath).extension().string();
-    std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
-    return ext == ".jpg" || ext == ".jpeg" || ext == ".png" || ext == ".gif" || ext == ".bmp";
-}
-
 bool isFileReadable(const std::string& filepath) {
     std::ifstream file(filepath);
     return file.good();
 }
 
 // Melhorar validateImagePath
-bool validateImagePath(const std::string& filepath, bool debug) {
-    try {
-        if (!std::filesystem::exists(filepath)) {
-            tsimg::utils::errorLog(debug, "File does not exist: " + filepath);
-            return false;
-        }
-        
-        if (!isFileReadable(filepath)) {
-            tsimg::utils::errorLog(debug, "File is not readable or permission denied: " + filepath);
-            return false;
-        }
-        
-        if (!isValidImageFormat(filepath)) {
-            tsimg::utils::errorLog(debug, "Invalid image format. Supported formats: jpg, jpeg, png, gif, bmp. File: " + filepath);
-            return false;
-        }
-        
-        tsimg::utils::debugLog(debug, "Image validation successful: " + filepath);
-        return true;
-    } catch (const std::exception& e) {
-        tsimg::utils::errorLog(debug, "Exception during image validation: " + std::string(e.what()) + " for file: " + filepath);
-        return false;
-    }
-}
+// Remover a versão global da função validateImagePath
+// bool validateImagePath(const std::string& filepath, bool debug) { ... }
 
 // Melhorar SPICEBuilder::addImage
 SPICEBuilder& SPICEBuilder::addImage(const std::string& imagePath) {
     tsimg::utils::debugLog(debug, "Adding image to SPICE_IMAGES: " + imagePath);
     
     try {
-        if (!validateImagePath(imagePath, debug)) {
+        if (!tsimg::utils::ImageValidator::validateImagePath(imagePath, debug)) {
             throw std::runtime_error("Image validation failed for: " + imagePath);
         }
         

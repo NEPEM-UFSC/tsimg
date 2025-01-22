@@ -112,6 +112,40 @@ private:
 std::string encodeImageToBase64(const std::string& imagePath, bool debug);
 
 // Adicionar após as outras declarações
-bool isValidImageFormat(const std::string& filepath);
 bool isFileReadable(const std::string& filepath);
-bool validateImagePath(const std::string& filepath, bool debug = false);
+
+// Funções de validação de imagem
+namespace tsimg::utils {
+    void debugLog(bool debug, const std::string& message);
+    void errorLog(bool debug, const std::string& message);
+    
+    class FileHandler {
+    public:
+        static std::string readFile(const std::string& filepath, bool debug = false);
+        static void writeFile(const std::string& filepath, const std::string& content, bool debug = false);
+        static bool isValidImageFormat(const std::string& filepath);
+        static bool isFileReadable(const std::string& filepath);
+        
+    private:
+        static void validateFilePath(const std::string& filepath);
+        static void createDirectoryIfNeeded(const std::string& filepath);
+        static std::string readFileContent(std::ifstream& file, const std::string& filepath, bool debug);
+        static void writeFileContent(std::ofstream& file, const std::string& content);
+        static std::string getFileExtension(const std::string& filepath);
+    };
+
+    class HTMLBuilder {
+    public:
+        static std::string createHelpSection(
+            const std::string& helpText, 
+            const std::string& helpContent, 
+            const std::string& helpLink
+        );
+        static std::string createLabelTags(const std::vector<std::string>& labels);
+    };
+
+    class ImageValidator {
+    public:
+        static bool validateImagePath(const std::string& filepath, bool debug = false);
+    };
+}
