@@ -5,6 +5,7 @@
 #include <map>
 #include <future>
 #include <thread>
+#include <memory>
 
 class Image {
 public:
@@ -19,12 +20,12 @@ private:
 
 class ImageList {
 public:
-    void addImage(const Image& image);
-    std::vector<Image> getImages() const;
+    void addImage(std::unique_ptr<Image> image);
+    std::vector<std::unique_ptr<Image>>& getImages();
     std::string generateImageTags() const;
 
 private:
-    std::vector<Image> images;
+    std::vector<std::unique_ptr<Image>> images;
 };
 
 class SpiceContent {
@@ -54,7 +55,7 @@ public:
     SPICEBuilder& addTitle(const std::string& title);
     SPICEBuilder& addImagesAsync(const std::vector<std::string>& imagePaths);
     const std::vector<SpiceContent>& getContents() const;
-    const std::map<std::string, ImageList>& getImageLists() const;
+    const std::map<std::string, std::unique_ptr<ImageList>>& getImageLists() const;
     const std::vector<std::string>& getLabels() const;
     const std::string& getAuthorImageBase64() const;
     const std::string& getTitle() const;
@@ -68,7 +69,7 @@ private:
     std::string title;
     bool debug;
     std::vector<SpiceContent> contents;
-    std::map<std::string, ImageList> imageLists;
+    std::map<std::string, std::unique_ptr<ImageList>> imageLists;
     std::vector<std::string> labels;
     std::string authorImageBase64;
 };
@@ -84,7 +85,7 @@ private:
     std::string title;
     bool debug;
     std::vector<SpiceContent> contents;
-    std::map<std::string, ImageList> imageLists;
+    std::map<std::string, std::unique_ptr<ImageList>> imageLists;
     std::vector<std::string> labels;
     std::string authorImageBase64;
 };
@@ -94,7 +95,7 @@ public:
     TemplateWriter(const std::string& templatePath, bool debug);
     void writeToFile(const std::string& outputFile, 
                      const std::vector<SpiceContent>& contents, 
-                     const std::map<std::string, ImageList>& imageLists, 
+                     const std::map<std::string, std::unique_ptr<ImageList>>& imageLists, 
                      const std::vector<std::string>& labels, 
                      const std::string& authorImageBase64);
     void build(const SPICEBuilder& builder, const std::string& outputFile);
@@ -103,9 +104,9 @@ public:
 private:
     std::string readFileToString(const std::string& filePath);
     std::string replaceTag(const std::string& source, const std::string& tag, const std::string& replacement);
-    bool validateImageListAndLabels(const std::map<std::string, ImageList>& imageLists, const std::vector<std::string>& labels);
+    bool validateImageListAndLabels(const std::map<std::string, std::unique_ptr<ImageList>>& imageLists, const std::vector<std::string>& labels);
     std::string replaceAllTags(const std::string& source, const std::vector<SpiceContent>& contents);
-    std::string replaceObjectPlaceholders(const std::string& source, const std::map<std::string, ImageList>& imageLists);
+    std::string replaceObjectPlaceholders(const std::string& source, const std::map<std::string, std::unique_ptr<ImageList>>& imageLists);
 
     std::string templatePath;
     std::string templateContent;
@@ -165,6 +166,6 @@ namespace tsimg::utils {
 
     class ImageProcessor {
     public:
-        static std::vector<std::future<Image>> processImagesAsync(const std::vector<std::string>& imagePaths, bool debug);
+        static std::vector<std::future<std::unique_ptr<Image>>> processImagesAsync(const std::vector<std::string>& imagePaths, bool debug);
     };
 }

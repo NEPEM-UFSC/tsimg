@@ -225,17 +225,17 @@ namespace tsimg::utils {
         }
     }
 
-    std::vector<std::future<Image>> ImageProcessor::processImagesAsync(const std::vector<std::string>& imagePaths, bool debug) {
-        std::vector<std::future<Image>> futures;
+    std::vector<std::future<std::unique_ptr<Image>>> ImageProcessor::processImagesAsync(const std::vector<std::string>& imagePaths, bool debug) {
+        std::vector<std::future<std::unique_ptr<Image>>> futures;
         for (const auto& path : imagePaths) {
             futures.push_back(std::async(std::launch::async, [path, debug]() {
                 try {
                     auto imageData = FileIO::readBinary(path);
                     std::string base64 = Base64::encode(imageData);
-                    return Image(path, base64);
+                    return std::make_unique<Image>(path, base64);
                 } catch (const std::exception& e) {
                     errorLog(debug, "Error processing image: " + path + " - " + e.what());
-                    return Image(path, "");
+                    return std::make_unique<Image>(path, "");
                 }
             }));
         }
@@ -269,18 +269,18 @@ std::string Image::getBase64() const {
     return base64;
 }
 
-void ImageList::addImage(const Image& image) {
-    images.push_back(image);
+void ImageList::addImage(std::unique_ptr<Image> image) {
+    images.push_back(std::move(image));
 }
 
-std::vector<Image> ImageList::getImages() const {
+std::vector<std::unique_ptr<Image>>& ImageList::getImages() {
     return images;
 }
 
 std::string ImageList::generateImageTags() const {
     std::string imageTags;
     for (const auto& image : images) {
-        imageTags += "<img src=\"data:image/png;base64," + image.getBase64() + "\" alt=\"" + image.getPath() + "\">";
+        imageTags += "<img src=\"data:image/png;base64," + image->getBase64() + "\" alt=\"" + image->getPath() + "\">";
     }
     return imageTags;
 }
@@ -350,10 +350,13 @@ SPICEBuilder& SPICEBuilder::addImagesAsync(const std::vector<std::string>& image
     
     for (auto& future : futures) {
         try {
-            Image img = future.get();
-            if (!img.getBase64().empty()) {
-                imageLists["SPICE_IMAGES"].addImage(img);
-                tsimg::utils::debugLog(debug, "Image added successfully: " + img.getPath());
+            auto img = future.get();
+            if (!img->getBase64().empty()) {
+                if (imageLists.find("SPICE_IMAGES") == imageLists.end()) {
+                    imageLists["SPICE_IMAGES"] = std::make_unique<ImageList>();
+                }
+                imageLists["SPICE_IMAGES"]->addImage(std::move(img));
+                tsimg::utils::debugLog(debug, "Image added successfully: " + img->getPath());
             }
         } catch (const std::exception& e) {
             tsimg::utils::errorLog(debug, "Failed to add image: " + std::string(e.what()));
@@ -367,7 +370,10 @@ SPICEBuilder& SPICEBuilder::addImageToList(const std::string& listTag, const std
     if (debug) std::cout << "Adding image to " << listTag << ": " << imagePath << std::endl;
     std::string base64Image = encodeImageToBase64(imagePath, debug);
     if (!base64Image.empty()) {
-        imageLists[listTag].addImage(Image(imagePath, base64Image));
+        if (imageLists.find(listTag) == imageLists.end()) {
+            imageLists[listTag] = std::make_unique<ImageList>();
+        }
+        imageLists[listTag]->addImage(std::make_unique<Image>(imagePath, base64Image));
         if (debug) std::cout << "Image added successfully to " << listTag << ": " << imagePath << std::endl;
     } else {
         if (debug) std::cerr << "Failed to add image to " << listTag << ": " << imagePath << std::endl;
@@ -396,8 +402,8 @@ SPICEBuilder& SPICEBuilder::addLabels(const std::vector<std::string>& labelList)
 SPICEBuilder& SPICEBuilder::generateLabelsFromImages() {
     if (debug) std::cout << "Generating labels from images." << std::endl;
     for (const auto& imageList : imageLists) {
-        for (const auto& image : imageList.second.getImages()) {
-            labels.push_back(image.getPath());
+        for (const auto& image : imageList.second->getImages()) {
+            labels.push_back(image->getPath());
         }
     }
     return *this;
@@ -435,7 +441,7 @@ const std::vector<SpiceContent>& SPICEBuilder::getContents() const {
     return contents;
 }
 
-const std::map<std::string, ImageList>& SPICEBuilder::getImageLists() const {
+const std::map<std::string, std::unique_ptr<ImageList>>& SPICEBuilder::getImageLists() const {
     return imageLists;
 }
 
@@ -454,7 +460,7 @@ const std::string& SPICEBuilder::getTitle() const {
 std::string SPICEBuilder::generateImageTags() const {
     std::string imageTags;
     for (const auto& imageList : imageLists) {
-        imageTags += imageList.second.generateImageTags();
+        imageTags += imageList.second->generateImageTags();
     }
     return imageTags;
 }
@@ -478,7 +484,7 @@ void SPICEBuilder::debugPrint() const {
 
 bool SPICEBuilder::hasAdditionalImages() const {
     auto it = imageLists.find("SPICE_IMAGES_1");
-    return it != imageLists.end() && !it->second.getImages().empty();
+    return it != imageLists.end() && !it->second->getImages().empty();
 }
 
 TemplateWriter::TemplateWriter(const std::string& templatePath, bool debug) : templatePath(templatePath), debug(debug) {
@@ -488,7 +494,7 @@ TemplateWriter::TemplateWriter(const std::string& templatePath, bool debug) : te
 // Melhorar TemplateWriter::writeToFile
 void TemplateWriter::writeToFile(const std::string& outputFile, 
                                  const std::vector<SpiceContent>& contents, 
-                                 const std::map<std::string, ImageList>& imageLists, 
+                                 const std::map<std::string, std::unique_ptr<ImageList>>& imageLists, 
                                  const std::vector<std::string>& labels, 
                                  const std::string& authorImageBase64) {
     tsimg::utils::debugLog(debug, "Starting writeToFile process for: " + outputFile);
@@ -631,9 +637,9 @@ std::string TemplateWriter::replaceTag(const std::string& source, const std::str
     }
 }
 
-bool TemplateWriter::validateImageListAndLabels(const std::map<std::string, ImageList>& imageLists, const std::vector<std::string>& labels) {
+bool TemplateWriter::validateImageListAndLabels(const std::map<std::string, std::unique_ptr<ImageList>>& imageLists, const std::vector<std::string>& labels) {
     for (const auto& [tag, imageList] : imageLists) {
-        if (imageList.getImages().size() != labels.size()) {
+        if (imageList->getImages().size() != labels.size()) {
             return false;
         }
     }
@@ -648,14 +654,14 @@ std::string TemplateWriter::replaceAllTags(const std::string& source, const std:
     return result;
 }
 
-std::string TemplateWriter::replaceObjectPlaceholders(const std::string& source, const std::map<std::string, ImageList>& imageLists) {
+std::string TemplateWriter::replaceObjectPlaceholders(const std::string& source, const std::map<std::string, std::unique_ptr<ImageList>>& imageLists) {
     std::string result = source;
     for (const auto& [tag, imageList] : imageLists) {
         if (source.find("<" + tag + ">") == std::string::npos) {
             if (debug) std::cerr << "Placeholder not found for tag: " + tag << std::endl;
             continue;
         }
-        std::string imageContent = !imageList.getImages().empty() ? imageList.generateImageTags() : "<p>No images available</p>";
+        std::string imageContent = !imageList->getImages().empty() ? imageList->generateImageTags() : "<p>No images available</p>";
         result = replaceTag(result, "<" + tag + ">", imageContent);
         if (debug) std::cout << "Replaced placeholder for tag: " + tag << std::endl;
     }
@@ -721,7 +727,7 @@ std::string TemplateWriter::buildHtmlStructure(const SPICEBuilder& builder) {
     for (const auto& [tag, list] : imageLists) {
         std::string placeholder = "<" + tag + ">";
         if (htmlContent.find(placeholder) != std::string::npos) {
-            std::string imageContent = list.generateImageTags();
+            std::string imageContent = list->generateImageTags();
             htmlContent = replaceTag(htmlContent, placeholder, imageContent);
         }
     }

@@ -5,6 +5,7 @@
 #include <fstream>
 #include <sstream>
 #include <filesystem>
+#include <memory>
 #include <nlohmann/json.hpp>
 #include "tsimg_spice.h" 
 #include "tsimg_gif.h"
@@ -293,18 +294,18 @@ int main(int argc, char* argv[]) {
             help_badge_url = config.value("help_badge_url", "");
             std::string author_image = config.value("author_image", "");
 
-            std::map<std::string, ImageList> imageLists;
+            std::map<std::string, std::unique_ptr<ImageList>> imageLists;
             for (int i = 0; ; ++i) {
                 std::string key = "images" + (i == 0 ? "" : "_" + std::to_string(i));
                 if (config.contains(key)) {
                     std::string placeholder = "SPICE_IMAGES" + (i == 0 ? "" : "_" + std::to_string(i));
-                    ImageList imageList;
+                    auto imageList = std::make_unique<ImageList>();
                     for (const auto& img : config[key]) {
                         if (debug) std::cout << "Processing image: " << img << std::endl;
-                        imageList.addImage(Image(img, ""));
+                        imageList->addImage(std::make_unique<Image>(img, ""));
                         if (debug) std::cout << "Image added successfully: " << img << std::endl;
                     }
-                    imageLists[placeholder] = imageList;
+                    imageLists[placeholder] = std::move(imageList);
                 } else {
                     break;
                 }
@@ -330,8 +331,8 @@ int main(int argc, char* argv[]) {
                     builder.setAuthorImage(author_image);
                 }
                 for (const auto& [tag, list] : imageLists) {
-                    for (const auto& img : list.getImages()) {
-                        builder.addImageToList(tag, img.getPath());
+                    for (const auto& img : list->getImages()) {
+                        builder.addImageToList(tag, img->getPath());
                     }
                 }
                 TemplateWriter writer("template_vs.html", debug);
