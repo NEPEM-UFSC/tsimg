@@ -125,4 +125,7 @@ dkms.conf
 /bkp
 /utils/build_info.txt
 /utils/auto_list.py
-.code-workspace
+/utils/convert_to_gif.py
+/utils/convert_to_spice.py
+
+tsimg.code-workspace
