@@ -19,6 +19,9 @@ CMakeUserPresets.json
 
 compile.txt
 
+.cpp.in
+
+
 # Ignorar arquivos de configuração do Visual Studio Code
 .vscode/
 
@@ -122,3 +125,4 @@ dkms.conf
 /bkp
 /utils/build_info.txt
 /utils/auto_list.py
+.code-workspace
