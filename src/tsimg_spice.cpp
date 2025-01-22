@@ -4,6 +4,169 @@
 #include <sstream>
 #include <filesystem>
 #include <stdexcept>
+#include <algorithm>
+
+namespace tsimg::utils {
+    void debugLog(bool debug, const std::string& message) {
+        if (debug) std::cout << "[DEBUG] " << message << std::endl;
+    }
+
+    void errorLog(bool debug, const std::string& message) {
+        if (debug) std::cerr << "[ERROR] " << message << std::endl;
+    }
+
+    std::string FileHandler::readFile(const std::string& filepath, bool debug) {
+        try {
+            validateFilePath(filepath);
+            std::ifstream file(filepath, std::ios::in | std::ios::binary | std::ios::ate);
+            
+            if (!file.is_open()) {
+                throw std::runtime_error("Could not open file: " + filepath);
+            }
+
+            return readFileContent(file, filepath, debug);
+        }
+        catch (const std::exception& e) {
+            errorLog(debug, std::string("Error reading file: ") + e.what());
+            throw;
+        }
+    }
+
+    void FileHandler::writeFile(const std::string& filepath, const std::string& content, bool debug) {
+        try {
+            validateFilePath(filepath);
+            createDirectoryIfNeeded(filepath);
+            
+            std::ofstream file(filepath);
+            if (!file.is_open()) {
+                throw std::runtime_error("Could not open file for writing: " + filepath);
+            }
+
+            writeFileContent(file, content);
+            debugLog(debug, "File written successfully: " + filepath);
+        }
+        catch (const std::exception& e) {
+            errorLog(debug, std::string("Error writing file: ") + e.what());
+            throw;
+        }
+    }
+
+    bool FileHandler::isValidImageFormat(const std::string& filepath) {
+        static const std::vector<std::string> validExtensions = {
+            ".jpg", ".jpeg", ".png", ".gif", ".bmp"
+        };
+        
+        std::string ext = getFileExtension(filepath);
+        return std::find(validExtensions.begin(), validExtensions.end(), ext) != validExtensions.end();
+    }
+
+    bool FileHandler::isFileReadable(const std::string& filepath) {
+        try {
+            validateFilePath(filepath);
+            std::ifstream file(filepath);
+            return file.good();
+        }
+        catch (...) {
+            return false;
+        }
+    }
+
+    void FileHandler::validateFilePath(const std::string& filepath) {
+        if (filepath.empty()) {
+            throw std::invalid_argument("Empty file path");
+        }
+    }
+
+    void FileHandler::createDirectoryIfNeeded(const std::string& filepath) {
+        auto directory = std::filesystem::path(filepath).parent_path();
+        if (!directory.empty() && !std::filesystem::exists(directory)) {
+            std::filesystem::create_directories(directory);
+        }
+    }
+
+    std::string FileHandler::readFileContent(std::ifstream& file, const std::string& filepath, bool debug) {
+        std::streamsize size = file.tellg();
+        file.seekg(0, std::ios::beg);
+
+        std::string buffer(size, '\0');
+        if (!file.read(&buffer[0], size)) {
+            throw std::runtime_error("Error reading file content: " + filepath);
+        }
+
+        debugLog(debug, "File read successfully: " + filepath);
+        return buffer;
+    }
+
+    void FileHandler::writeFileContent(std::ofstream& file, const std::string& content) {
+        file << content;
+        file.close();
+        
+        if (file.fail()) {
+            throw std::runtime_error("Failed to write file content");
+        }
+    }
+
+    std::string FileHandler::getFileExtension(const std::string& filepath) {
+        std::string ext = std::filesystem::path(filepath).extension().string();
+        std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+        return ext;
+    }
+
+    bool ImageValidator::validateImagePath(const std::string& filepath, bool debug) {
+        try {
+            if (!std::filesystem::exists(filepath)) {
+                errorLog(debug, "File does not exist: " + filepath);
+                return false;
+            }
+            
+            if (!FileHandler::isFileReadable(filepath)) {
+                errorLog(debug, "File is not readable or permission denied: " + filepath);
+                return false;
+            }
+            
+            if (!FileHandler::isValidImageFormat(filepath)) {
+                errorLog(debug, "Invalid image format. Supported formats: jpg, jpeg, png, gif, bmp. File: " + filepath);
+                return false;
+            }
+            
+            debugLog(debug, "Image validation successful: " + filepath);
+            return true;
+        } catch (const std::exception& e) {
+            errorLog(debug, "Exception during image validation: " + std::string(e.what()) + " for file: " + filepath);
+            return false;
+        }
+    }
+
+    // HTMLBuilder implementation
+    std::string HTMLBuilder::createHelpSection(
+        const std::string& helpText, 
+        const std::string& helpContent, 
+        const std::string& helpLink
+    ) {
+        if (helpText.empty() || helpContent.empty() || helpLink.empty()) {
+            return "";
+        }
+
+        std::ostringstream oss;
+        oss << "<div class=\"help-button-container\">\n";
+        oss << "    <div class=\"help-text\">\n"
+            << "        " << helpText << "\n"
+            << "    </div>\n"
+            << "    <div class=\"help-badge\">\n"
+            << "        " << helpContent << "\n"
+            << "    </div>\n"
+            << "</div>";
+        return oss.str();
+    }
+
+    std::string HTMLBuilder::createLabelTags(const std::vector<std::string>& labels) {
+        std::ostringstream oss;
+        for (const auto& label : labels) {
+            oss << "<span>" << label << "</span>";
+        }
+        return oss.str();
+    }
+}
 
 SpiceContent::SpiceContent(const std::string& tag, const std::string& baseHtml, const std::string& variableContent)
     : tag(tag), baseHtml(baseHtml), variableContent(variableContent) {}
@@ -91,14 +254,34 @@ SPICEBuilder::SPICEBuilder(const std::string& title, bool debug)
     }
 }
 
+bool isFileReadable(const std::string& filepath) {
+    std::ifstream file(filepath);
+    return file.good();
+}
+
+// Melhorar validateImagePath
+// Remover a versão global da função validateImagePath
+// bool validateImagePath(const std::string& filepath, bool debug) { ... }
+
+// Melhorar SPICEBuilder::addImage
 SPICEBuilder& SPICEBuilder::addImage(const std::string& imagePath) {
-    if (debug) std::cout << "Adding image to SPICE_IMAGES: " << imagePath << std::endl;
-    std::string base64Image = encodeImageToBase64(imagePath, debug);
-    if (!base64Image.empty()) {
+    tsimg::utils::debugLog(debug, "Adding image to SPICE_IMAGES: " + imagePath);
+    
+    try {
+        if (!tsimg::utils::ImageValidator::validateImagePath(imagePath, debug)) {
+            throw std::runtime_error("Image validation failed for: " + imagePath);
+        }
+        
+        std::string base64Image = encodeImageToBase64(imagePath, debug);
+        if (base64Image.empty()) {
+            throw std::runtime_error("Base64 encoding failed for: " + imagePath);
+        }
+        
         imageLists["SPICE_IMAGES"].addImage(Image(imagePath, base64Image));
-        if (debug) std::cout << "Image added successfully: " << imagePath << std::endl;
-    } else {
-        if (debug) std::cerr << "Failed to add image: " << imagePath << std::endl;
+        tsimg::utils::debugLog(debug, "Image added successfully: " + imagePath);
+    } catch (const std::exception& e) {
+        tsimg::utils::errorLog(debug, "Failed to add image: " + std::string(e.what()));
+        throw; // Re-throw para permitir tratamento em nível superior
     }
     return *this;
 }
@@ -222,86 +405,95 @@ bool SPICEBuilder::hasAdditionalImages() const {
 }
 
 TemplateWriter::TemplateWriter(const std::string& templatePath, bool debug) : templatePath(templatePath), debug(debug) {
-    templateContent = readFileToString(templatePath);
+    templateContent = tsimg::utils::FileHandler::readFile(templatePath, debug);
 }
 
+// Melhorar TemplateWriter::writeToFile
 void TemplateWriter::writeToFile(const std::string& outputFile, 
                                  const std::vector<SpiceContent>& contents, 
                                  const std::map<std::string, ImageList>& imageLists, 
                                  const std::vector<std::string>& labels, 
                                  const std::string& authorImageBase64) {
-    if (debug) {
-        std::cout << "Starting writeToFile with outputFile: " << outputFile << std::endl;
-    }
+    tsimg::utils::debugLog(debug, "Starting writeToFile process for: " + outputFile);
 
-    if (contents.empty()) {
-        if (debug) std::cerr << "Error: No contents available to write to the file." << std::endl;
-        return;
-    }
-    if (imageLists.empty()) {
-        if (debug) std::cerr << "Error: No image lists available to write to the file." << std::endl;
-        return;
-    }
-    if (!validateImageListAndLabels(imageLists, labels)) {
-        if (debug) {
-            std::cerr << "Validation failed: The number of images and labels must be the same." << std::endl;
+    try {
+        if (contents.empty()) {
+            throw std::runtime_error("No contents available to write");
         }
-        return;
-    }
-
-    std::string outputContent = templateContent;
-    outputContent = replaceAllTags(outputContent, contents);
-    outputContent = replaceObjectPlaceholders(outputContent, imageLists);
-    std::string authorImageTag = authorImageBase64.empty() ? "" : "data:image/png;base64," + authorImageBase64;
-    outputContent = replaceTag(outputContent, "<SPICE_AUTHOR_IMAGE>", authorImageTag);
-
-    if (authorImageTag.empty()) {
-        outputContent = replaceTag(outputContent, "<SPICE_AUTHOR_IMAGE>", "");
-    }
-
-    std::string labelTags;
-    for (const auto& label : labels) {
-        labelTags += "<span>" + label + "</span>";
-    }
-    outputContent = replaceTag(outputContent, "<SPICE_LABELS>", labelTags);
-
-
-    std::string helpSection = "";
-    std::string helpTextTag = "";
-    std::string helpContentTag = "";
-    for (const auto& content : contents) {
-        if (content.getTag() == "SPICE_HELP_TEXT") {
-            helpTextTag = content.getVariableContent();
-        } else if (content.getTag() == "SPICE_HELP_CONTENT") {
-            helpContentTag = content.getVariableContent();
+        if (imageLists.empty()) {
+            throw std::runtime_error("No image lists available to write");
         }
-    }
-    if (!helpTextTag.empty() && !helpContentTag.empty()) {
-        helpSection = "<div class=\"help-button-container\">\n"
-                      "    <div class=\"help-text\">\n"
-                      "        " + helpTextTag + "\n"
-                      "    </div>\n"
-                      "    <div class=\"help-badge\">\n"
-                      "        " + helpContentTag + "\n"
-                      "    </div>\n"
-                      "</div>";
-    }
-    outputContent = replaceTag(outputContent, "<SPICE_HELP_SECTION>", helpSection);
+        if (!validateImageListAndLabels(imageLists, labels)) {
+            throw std::runtime_error("Image list and labels validation failed - counts must match");
+        }
 
-    if (helpSection.empty()) {
-        outputContent = replaceTag(outputContent, "<SPICE_HELP_SECTION>", "");
-    }
+        std::string outputContent = templateContent;
+        tsimg::utils::debugLog(debug, "Processing template content...");
+        
+        outputContent = replaceAllTags(outputContent, contents);
+        tsimg::utils::debugLog(debug, "Tags replacement completed");
+        
+        outputContent = replaceObjectPlaceholders(outputContent, imageLists);
+        tsimg::utils::debugLog(debug, "Object placeholders replacement completed");
 
-    std::ofstream outFile(outputFile);
-    if (!outFile.is_open()) {
-        if (debug) std::cerr << "Error: Could not open output file: " << outputFile << std::endl;
-        return;
-    }
-    outFile << outputContent;
-    outFile.close();
+        std::string authorImageTag = authorImageBase64.empty() ? "" : "data:image/png;base64," + authorImageBase64;
+        outputContent = replaceTag(outputContent, "<SPICE_AUTHOR_IMAGE>", authorImageTag);
 
-    if (debug) {
-        std::cout << "Output file written to: " << outputFile << std::endl;
+        if (authorImageTag.empty()) {
+            outputContent = replaceTag(outputContent, "<SPICE_AUTHOR_IMAGE>", "");
+        }
+
+        std::string labelTags;
+        for (const auto& label : labels) {
+            labelTags += "<span>" + label + "</span>";
+        }
+        outputContent = replaceTag(outputContent, "<SPICE_LABELS>", labelTags);
+
+        std::string helpText = "";
+        std::string helpLink = "";
+        std::string helpBadgeUrl = "";
+
+        // Procura pelos conteúdos de ajuda
+        for (const auto& content : contents) {
+            if (content.getTag() == "SPICE_HELP_TEXT") {
+                helpText = content.getVariableContent();
+            } else if (content.getTag() == "SPICE_HELP_CONTENT") {
+                helpBadgeUrl = content.getVariableContent();
+            } else if (content.getTag() == "SPICE_HELP_LINK") {
+                helpLink = content.getVariableContent();
+            }
+        }
+
+        // Cria a seção de ajuda apenas se todas as informações estiverem presentes
+        std::string helpSection = tsimg::utils::HTMLBuilder::createHelpSection(
+            helpText,
+            helpBadgeUrl,
+            helpLink
+        );
+
+        // Se não houver seção de ajuda, remove a tag completamente
+        if (helpSection.empty()) {
+            // Remove a tag e qualquer div container que a contenha
+            size_t startPos = outputContent.find("<div class=\"help-section\">");
+            if (startPos != std::string::npos) {
+                size_t endPos = outputContent.find("</div>", startPos);
+                if (endPos != std::string::npos) {
+                    endPos += 6; // comprimento de "</div>"
+                    outputContent.erase(startPos, endPos - startPos);
+                }
+            }
+            outputContent = replaceTag(outputContent, "<SPICE_HELP_SECTION>", "");
+        } else {
+            outputContent = replaceTag(outputContent, "<SPICE_HELP_SECTION>", helpSection);
+        }
+
+        tsimg::utils::FileHandler::writeFile(outputFile, outputContent, debug);
+        
+        tsimg::utils::debugLog(debug, "File written successfully: " + outputFile);
+        
+    } catch (const std::exception& e) {
+        tsimg::utils::errorLog(debug, "Error in writeToFile: " + std::string(e.what()));
+        throw; // Re-throw para permitir tratamento em nível superior
     }
 }
 
@@ -322,9 +514,7 @@ void TemplateWriter::build(const SPICEBuilder& builder, const std::string& outpu
     outputContent = replaceObjectPlaceholders(outputContent, imageLists);
     outputContent = replaceTag(outputContent, "<SPICE_AUTHOR_IMAGE>", authorImageBase64);
 
-    std::ofstream outFile(outputFile);
-    outFile << outputContent;
-    outFile.close();
+    tsimg::utils::FileHandler::writeFile(outputFile, outputContent, debug);
 
     if (debug) {
         std::cout << "Output file written to: " << outputFile << std::endl;
@@ -332,34 +522,36 @@ void TemplateWriter::build(const SPICEBuilder& builder, const std::string& outpu
 }
 
 std::string TemplateWriter::readFileToString(const std::string& filePath) {
-    std::ifstream file(filePath, std::ios::in | std::ios::binary | std::ios::ate);
-    if (!file.is_open()) {
-        throw std::runtime_error("Could not open file: " + filePath);
-    }
-
-    std::streamsize size = file.tellg();
-    file.seekg(0, std::ios::beg);
-
-    std::string buffer(size, '\0');
-    if (!file.read(&buffer[0], size)) {
-        throw std::runtime_error("Error reading file: " + filePath);
-    }
-
-    return buffer;
+    return tsimg::utils::FileHandler::readFile(filePath, debug);
 }
 
+// Melhorar replaceTag com validação mais robusta
 std::string TemplateWriter::replaceTag(const std::string& source, const std::string& tag, const std::string& replacement) {
-    std::string result = source;
-    size_t pos = result.find(tag);
-    if (pos == std::string::npos) {
-        if (debug) std::cerr << "DEBUG: Placeholder not found: " + tag << " - Ignoring this section." << std::endl;
+    try {
+        if (tag.empty()) {
+            throw std::invalid_argument("Empty tag provided");
+        }
+
+        std::string result = source;
+        size_t pos = result.find(tag);
+        
+        if (pos == std::string::npos) {
+            tsimg::utils::debugLog(debug, "Tag not found in template: " + tag);
+            return result;
+        }
+
+        while (pos != std::string::npos) {
+            result.replace(pos, tag.length(), replacement);
+            pos = result.find(tag, pos + replacement.length());
+        }
+
+        tsimg::utils::debugLog(debug, "Tag replaced successfully: " + tag);
         return result;
+        
+    } catch (const std::exception& e) {
+        tsimg::utils::errorLog(debug, "Error replacing tag " + tag + ": " + std::string(e.what()));
+        throw;
     }
-    while (pos != std::string::npos) {
-        result.replace(pos, tag.length(), replacement);
-        pos = result.find(tag, pos + replacement.length());
-    }
-    return result;
 }
 
 bool TemplateWriter::validateImageListAndLabels(const std::map<std::string, ImageList>& imageLists, const std::vector<std::string>& labels) {
@@ -464,7 +656,6 @@ std::string TemplateWriter::buildHtmlStructure(const SPICEBuilder& builder) {
         try {
             htmlContent = replaceTag(htmlContent, placeholder, c.getVariableContent());
         } catch(...) {
-            // Se não existir a tag, ignore
         }
     }
 

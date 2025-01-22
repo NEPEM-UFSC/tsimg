@@ -4,13 +4,17 @@ from datetime import datetime
 
 print("GBI - EVOKED ")
 print("Generating build info...")
+
 build_info_file = '../utils/build_info.txt'
 version_file = '../version.rc'
+header_file_path = '../src/build_info.h'
 
-# Ensure the directory exists
+build_info_file = os.path.abspath(build_info_file)
+version_file = os.path.abspath(version_file)
+header_file_path = os.path.abspath(header_file_path)
+
 os.makedirs(os.path.dirname(build_info_file), exist_ok=True)
 
-# Read the current build info
 if os.path.exists(build_info_file):
     with open(build_info_file, 'r') as file:
         content = file.read().strip()
@@ -26,7 +30,6 @@ if os.path.exists(build_info_file):
 else:
     version, microversion, build_number = "1.0", "0", 1
 
-# Generate the build info
 build_info = (
     f'{version},{microversion},{build_number}'
 )
@@ -49,10 +52,8 @@ except Exception as e:
     print('Failed to generate build info')
     exit(1)
 
-os.makedirs('src', exist_ok=True)
+os.makedirs(os.path.dirname(header_file_path), exist_ok=True)
 
-# Print the path to the header file
-header_file_path = '../src/build_info.h'
 header_content = f'#pragma once\n\n#define BUILD_INFO "Version: {version}\\nMicroversion: {microversion}\\nBuild Number: {build_number}\\nBuild Date: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}"\n'
 
 try:

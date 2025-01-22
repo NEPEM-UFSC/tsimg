@@ -10,6 +10,9 @@
 #include "tsimg_gif.h"
 #include "build_info.h"
 
+const std::string DEFAULT_TITLE = "TSIMG Presentation";
+const std::string APP_NAME = "Temporal Series Interactive Imager";
+
 std::vector<std::string> split(const std::string& str, char delimiter) {
     std::vector<std::string> tokens;
     std::string token;
@@ -107,7 +110,125 @@ void display_info() {
     std::cerr << "  -help_badge_url <url>   Help badge image URL (optional)." << std::endl;
 }
 
+bool validateJsonConfig(const nlohmann::json& config, bool debug) {
+    // Verificar campos obrigatórios
+    const std::vector<std::string> required = {"export_format", "output_filename"};
+    for (const auto& field : required) {
+        if (!config.contains(field)) {
+            if (debug) std::cerr << "Error: Missing required field in JSON config: " << field << std::endl;
+            return false;
+        }
+    }
+    
+    // Validar formato de exportação
+    std::string format = config["export_format"];
+    if (format != "spice" && format != "gif") {
+        if (debug) std::cerr << "Error: Invalid export format in config: " << format << std::endl;
+        return false;
+    }
+    
+    // Validar imagens se presentes
+    for (int i = 0; ; ++i) {
+        std::string key = "images" + (i == 0 ? "" : "_" + std::to_string(i));
+        if (!config.contains(key)) break;
+        
+        if (!config[key].is_array()) {
+            if (debug) std::cerr << "Error: " << key << " must be an array" << std::endl;
+            return false;
+        }
+        
+        for (const auto& img : config[key]) {
+            if (!img.is_string()) {
+                if (debug) std::cerr << "Error: Image path must be a string" << std::endl;
+                return false;
+            }
+            // Usar a função do namespace
+            if (!tsimg::utils::ImageValidator::validateImagePath(img, debug)) {
+                return false;
+            }
+        }
+    }
+    
+    return true;
+}
+
 int main(int argc, char* argv[]) {
+    if (argc == 1) {
+        // Modo Interativo
+        app_info = true;
+        display_info();
+
+        std::cout << "Por favor, insira os parâmetros necessários." << std::endl;
+
+        std::string output_filename;
+        std::string images_input;
+        std::string labels_input;
+        std::string format = "spice";
+        bool debug = false;
+        std::string json_config_file;
+        std::string title;  // Novo campo para título
+
+        // Adicionar prompt para título
+        std::cout << "Título da apresentação (pressione Enter para usar o padrão): ";
+        std::getline(std::cin, title);
+        if (title.empty()) {
+            title = DEFAULT_TITLE;
+        }
+
+        std::cout << "Nome do arquivo de saída: ";
+        std::getline(std::cin, output_filename);
+
+        std::cout << "Caminhos das imagens (separados por vírgula): ";
+        std::getline(std::cin, images_input);
+        std::vector<std::string> image_paths = split(images_input, ',');
+
+        std::cout << "Labels (opcional, separados por vírgula): ";
+        std::getline(std::cin, labels_input);
+        std::vector<std::string> labels = split(labels_input, ',');
+
+        std::cout << "Formato de exportação ('spice' ou 'gif', padrão: 'spice'): ";
+        std::string format_input;
+        std::getline(std::cin, format_input);
+        if (!format_input.empty()) {
+            format = format_input;
+        }
+
+        std::cout << "Ativar modo debug? (s/n): ";
+        std::string debug_input;
+        std::getline(std::cin, debug_input);
+        if (debug_input == "s" || debug_input == "S") {
+            debug = true;
+        }
+
+        // Processamento dos dados de entrada
+        try {
+            if (format == "spice") {
+                SPICEBuilder builder(title, debug);
+                builder.addTitle(title);  // Usar o mesmo título
+                for (const auto& img : image_paths) {
+                    builder.addImage(img);
+                }
+                builder.addLabels(labels);
+                TemplateWriter writer("template_vs.html", debug);
+                writer.writeToFile(output_filename, builder.getContents(), builder.getImageLists(), builder.getLabels(), builder.getAuthorImageBase64());
+                std::cout << "Arquivo SPICE gerado com sucesso: " << output_filename << std::endl;
+            } else if (format == "gif") {
+                if (createGif(output_filename, image_paths, debug)) {
+                    std::cout << "Arquivo GIF gerado com sucesso: " << output_filename << std::endl;
+                } else {
+                    std::cerr << "Falha ao criar o arquivo GIF: " << output_filename << std::endl;
+                }
+            } else {
+                std::cerr << "Formato não suportado: " << format << std::endl;
+                return 1;
+            }
+        } catch (const std::exception& e) {
+            std::cerr << "Erro durante o processamento: " << e.what() << std::endl;
+            return 1;
+        }
+
+        return 0;
+    }
     std::string output_filename;
     std::vector<std::string> image_paths;
     std::vector<std::string> labels;
@@ -118,11 +239,6 @@ int main(int argc, char* argv[]) {
     std::string author_image_path;
 
     std::vector<std::vector<std::string>> imagePathsExtras;
-
-    if (argc == 1) {
-        display_info();
-        return 1;
-    }
 
     for (int i = 1; i < argc; ++i) {
         if (std::strcmp(argv[i], "-info") == 0) {
@@ -163,10 +279,15 @@ int main(int argc, char* argv[]) {
         try {
             nlohmann::json config = read_json_file(json_config_file, debug);
             
+            if (!validateJsonConfig(config, debug)) {
+                std::cerr << "Invalid JSON configuration file" << std::endl;
+                return 1;
+            }
+            
             format = config.value("export_format", "spice");
             output_filename = config.value("output_filename", "output.html");
             labels = config.value("labels", std::vector<std::string>{});
-            std::string title = config.value("title", "SPICE Presentation");
+            std::string title = config.value("title", DEFAULT_TITLE);  // Usar título padrão
             std::string main_text = config.value("main_text", "This is generated from a JSON config.");
 
             help_text = config.value("help_text", "");
@@ -198,7 +319,7 @@ int main(int argc, char* argv[]) {
                 }
             } else if (format == "spice") {
                 SPICEBuilder builder(title, debug);
-                builder.addTitle(title);
+                builder.addTitle(title);  // Consistência no uso do título
                 builder.addContent("SPICE_TEXT", main_text);
                 if (createLabelsFromImages) {
                     builder.generateLabelsFromImages();
@@ -231,9 +352,27 @@ int main(int argc, char* argv[]) {
             return 1;
         }
 
+        // Validar caminhos de imagem em modo CLI
+        for (const auto& img : image_paths) {
+            if (!tsimg::utils::ImageValidator::validateImagePath(img, debug)) {
+                std::cerr << "Invalid image file: " << img << std::endl;
+                return 1;
+            }
+        }
+        
+        // Validar caminhos de imagem extras
+        for (const auto& extraList : imagePathsExtras) {
+            for (const auto& img : extraList) {
+                if (!tsimg::utils::ImageValidator::validateImagePath(img, debug)) {
+                    std::cerr << "Invalid image file in extra list: " << img << std::endl;
+                    return 1;
+                }
+            }
+        }
+
         if (format == "spice") {
-            SPICEBuilder builder("CLI Title", debug);
-            builder.addTitle("CLI Title");
+            SPICEBuilder builder(DEFAULT_TITLE, debug);  // Usar título padrão
+            builder.addTitle(DEFAULT_TITLE);
             for (const auto& img : image_paths) {
                 builder.addImage(img);
             }
