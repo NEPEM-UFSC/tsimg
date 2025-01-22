@@ -3,6 +3,8 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <future>
+#include <thread>
 
 class Image {
 public:
@@ -50,6 +52,7 @@ public:
     SPICEBuilder& setAuthorImage(const std::string& imagePath);
     SPICEBuilder& setHelp(const std::string& helpText, const std::string& helpLink, const std::string& helpBadgeURL);
     SPICEBuilder& addTitle(const std::string& title);
+    SPICEBuilder& addImagesAsync(const std::vector<std::string>& imagePaths);
     const std::vector<SpiceContent>& getContents() const;
     const std::map<std::string, ImageList>& getImageLists() const;
     const std::vector<std::string>& getLabels() const;
@@ -147,5 +150,21 @@ namespace tsimg::utils {
     class ImageValidator {
     public:
         static bool validateImagePath(const std::string& filepath, bool debug = false);
+    };
+
+    class Base64 {
+    public:
+        static std::string encode(const std::vector<unsigned char>& data);
+    };
+
+    class FileIO {
+    public:
+        static std::vector<unsigned char> readBinary(const std::string& filepath);
+        static void writeBinary(const std::string& filepath, const std::vector<unsigned char>& data);
+    };
+
+    class ImageProcessor {
+    public:
+        static std::vector<std::future<Image>> processImagesAsync(const std::vector<std::string>& imagePaths, bool debug);
     };
 }

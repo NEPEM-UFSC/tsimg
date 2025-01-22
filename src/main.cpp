@@ -205,9 +205,7 @@ int main(int argc, char* argv[]) {
             if (format == "spice") {
                 SPICEBuilder builder(title, debug);
                 builder.addTitle(title);  // Usar o mesmo título
-                for (const auto& img : image_paths) {
-                    builder.addImage(img);
-                }
+                builder.addImagesAsync(image_paths);  // Usar a versão assíncrona
                 builder.addLabels(labels);
                 TemplateWriter writer("template_vs.html", debug);
                 writer.writeToFile(output_filename, builder.getContents(), builder.getImageLists(), builder.getLabels(), builder.getAuthorImageBase64());
@@ -373,9 +371,7 @@ int main(int argc, char* argv[]) {
         if (format == "spice") {
             SPICEBuilder builder(DEFAULT_TITLE, debug);  // Usar título padrão
             builder.addTitle(DEFAULT_TITLE);
-            for (const auto& img : image_paths) {
-                builder.addImage(img);
-            }
+            builder.addImagesAsync(image_paths);  // Usar a versão assíncrona
             if (createLabelsFromImages) {
                 builder.generateLabelsFromImages();
             }

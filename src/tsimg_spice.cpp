@@ -5,6 +5,8 @@
 #include <filesystem>
 #include <stdexcept>
 #include <algorithm>
+#include <thread>
+#include <future>
 
 namespace tsimg::utils {
     void debugLog(bool debug, const std::string& message) {
@@ -166,6 +168,79 @@ namespace tsimg::utils {
         }
         return oss.str();
     }
+
+    std::string Base64::encode(const std::vector<unsigned char>& data) {
+        static const char* encoding_table = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+        std::string encoded;
+        encoded.reserve(((data.size() + 2) / 3) * 4);
+
+        for (size_t i = 0; i < data.size(); i += 3) {
+            uint32_t octet_a = i < data.size() ? data[i] : 0;
+            uint32_t octet_b = i + 1 < data.size() ? data[i + 1] : 0;
+            uint32_t octet_c = i + 2 < data.size() ? data[i + 2] : 0;
+
+            uint32_t triple = (octet_a << 16) + (octet_b << 8) + octet_c;
+
+            encoded.push_back(encoding_table[(triple >> 18) & 0x3F]);
+            encoded.push_back(encoding_table[(triple >> 12) & 0x3F]);
+            encoded.push_back(encoding_table[(triple >> 6) & 0x3F]);
+            encoded.push_back(encoding_table[triple & 0x3F]);
+        }
+
+        int mod_table[] = {0, 2, 1};
+        int padding = mod_table[data.size() % 3];
+        for (int i = 0; i < padding; i++) {
+            encoded[encoded.size() - 1 - i] = '=';
+        }
+
+        return encoded;
+    }
+
+    std::vector<unsigned char> FileIO::readBinary(const std::string& filepath) {
+        std::ifstream file(filepath, std::ios::binary | std::ios::ate);
+        if (!file.is_open()) {
+            throw std::runtime_error("Could not open file: " + filepath);
+        }
+
+        std::streamsize size = file.tellg();
+        file.seekg(0, std::ios::beg);
+
+        std::vector<unsigned char> buffer(size);
+        if (!file.read(reinterpret_cast<char*>(buffer.data()), size)) {
+            throw std::runtime_error("Error reading file: " + filepath);
+        }
+
+        return buffer;
+    }
+
+    void FileIO::writeBinary(const std::string& filepath, const std::vector<unsigned char>& data) {
+        std::ofstream file(filepath, std::ios::binary);
+        if (!file.is_open()) {
+            throw std::runtime_error("Could not open file for writing: " + filepath);
+        }
+
+        file.write(reinterpret_cast<const char*>(data.data()), data.size());
+        if (file.fail()) {
+            throw std::runtime_error("Failed to write file: " + filepath);
+        }
+    }
+
+    std::vector<std::future<Image>> ImageProcessor::processImagesAsync(const std::vector<std::string>& imagePaths, bool debug) {
+        std::vector<std::future<Image>> futures;
+        for (const auto& path : imagePaths) {
+            futures.push_back(std::async(std::launch::async, [path, debug]() {
+                try {
+                    auto imageData = FileIO::readBinary(path);
+                    std::string base64 = Base64::encode(imageData);
+                    return Image(path, base64);
+                } catch (const std::exception& e) {
+                    errorLog(debug, "Error processing image: " + path + " - " + e.what());
+                    return Image(path, "");
+                }
+            }));
+        }
+        return futures;
+    }
 }
 
 SpiceContent::SpiceContent(const std::string& tag, const std::string& baseHtml, const std::string& variableContent)
@@ -265,24 +340,26 @@ bool isFileReadable(const std::string& filepath) {
 
 // Melhorar SPICEBuilder::addImage
 SPICEBuilder& SPICEBuilder::addImage(const std::string& imagePath) {
-    tsimg::utils::debugLog(debug, "Adding image to SPICE_IMAGES: " + imagePath);
+    return addImagesAsync({imagePath});
+}
+
+SPICEBuilder& SPICEBuilder::addImagesAsync(const std::vector<std::string>& imagePaths) {
+    tsimg::utils::debugLog(debug, "Adding images asynchronously");
     
-    try {
-        if (!tsimg::utils::ImageValidator::validateImagePath(imagePath, debug)) {
-            throw std::runtime_error("Image validation failed for: " + imagePath);
+    auto futures = tsimg::utils::ImageProcessor::processImagesAsync(imagePaths, debug);
+    
+    for (auto& future : futures) {
+        try {
+            Image img = future.get();
+            if (!img.getBase64().empty()) {
+                imageLists["SPICE_IMAGES"].addImage(img);
+                tsimg::utils::debugLog(debug, "Image added successfully: " + img.getPath());
+            }
+        } catch (const std::exception& e) {
+            tsimg::utils::errorLog(debug, "Failed to add image: " + std::string(e.what()));
         }
-        
-        std::string base64Image = encodeImageToBase64(imagePath, debug);
-        if (base64Image.empty()) {
-            throw std::runtime_error("Base64 encoding failed for: " + imagePath);
-        }
-        
-        imageLists["SPICE_IMAGES"].addImage(Image(imagePath, base64Image));
-        tsimg::utils::debugLog(debug, "Image added successfully: " + imagePath);
-    } catch (const std::exception& e) {
-        tsimg::utils::errorLog(debug, "Failed to add image: " + std::string(e.what()));
-        throw; // Re-throw para permitir tratamento em nível superior
     }
+    
     return *this;
 }
 
