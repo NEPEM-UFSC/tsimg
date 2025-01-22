@@ -1,3 +1,3 @@
 #pragma once
 
-#define BUILD_INFO "Version: 0.1.4\nMicroversion: alpha\nBuild Number: 259\nBuild Date: 2025-01-21 21:46:45"
+#define BUILD_INFO "Version: 0.1.6\nMicroversion: alpha\nBuild Number: 268\nBuild Date: 2025-01-22 01:16:58"

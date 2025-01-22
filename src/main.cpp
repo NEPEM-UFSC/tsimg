@@ -5,6 +5,7 @@
 #include <fstream>
 #include <sstream>
 #include <filesystem>
+#include <memory>
 #include <nlohmann/json.hpp>
 #include "tsimg_spice.h" 
 #include "tsimg_gif.h"
@@ -108,6 +109,7 @@ void display_info() {
     std::cerr << "  -help_text <text>       Help text to display (optional)." << std::endl;
     std::cerr << "  -help_link <link>       Help link URL (optional)." << std::endl;
     std::cerr << "  -help_badge_url <url>   Help badge image URL (optional)." << std::endl;
+    std::cerr << "  -template <template_path> Path to custom HTML template (optional)." << std::endl;
 }
 
 bool validateJsonConfig(const nlohmann::json& config, bool debug) {
@@ -205,9 +207,7 @@ int main(int argc, char* argv[]) {
             if (format == "spice") {
                 SPICEBuilder builder(title, debug);
                 builder.addTitle(title);  // Usar o mesmo título
-                for (const auto& img : image_paths) {
-                    builder.addImage(img);
-                }
+                builder.addImagesAsync(image_paths);  // Usar a versão assíncrona
                 builder.addLabels(labels);
                 TemplateWriter writer("template_vs.html", debug);
                 writer.writeToFile(output_filename, builder.getContents(), builder.getImageLists(), builder.getLabels(), builder.getAuthorImageBase64());
@@ -237,6 +237,7 @@ int main(int argc, char* argv[]) {
     std::string format = "spice";
     std::string json_config_file;
     std::string author_image_path;
+    std::string template_path;
 
     std::vector<std::vector<std::string>> imagePathsExtras;
 
@@ -272,6 +273,8 @@ int main(int argc, char* argv[]) {
             imagePathsExtras.push_back(split(argv[++i], ','));
         } else if (std::strncmp(argv[i], "-3", 2) == 0 && i + 1 < argc) {
             imagePathsExtras.push_back(split(argv[++i], ','));
+        } else if (std::strcmp(argv[i], "-template") == 0 && i + 1 < argc) {
+            template_path = argv[++i];
         }
     }
 
@@ -294,19 +297,20 @@ int main(int argc, char* argv[]) {
             help_link = config.value("help_link", "");
             help_badge_url = config.value("help_badge_url", "");
             std::string author_image = config.value("author_image", "");
+            std::string template_file = config.value("template", "");
 
-            std::map<std::string, ImageList> imageLists;
+            std::map<std::string, std::unique_ptr<ImageList>> imageLists;
             for (int i = 0; ; ++i) {
                 std::string key = "images" + (i == 0 ? "" : "_" + std::to_string(i));
                 if (config.contains(key)) {
                     std::string placeholder = "SPICE_IMAGES" + (i == 0 ? "" : "_" + std::to_string(i));
-                    ImageList imageList;
+                    auto imageList = std::make_unique<ImageList>();
                     for (const auto& img : config[key]) {
                         if (debug) std::cout << "Processing image: " << img << std::endl;
-                        imageList.addImage(Image(img, ""));
+                        imageList->addImage(std::make_unique<Image>(img, ""));
                         if (debug) std::cout << "Image added successfully: " << img << std::endl;
                     }
-                    imageLists[placeholder] = imageList;
+                    imageLists[placeholder] = std::move(imageList);
                 } else {
                     break;
                 }
@@ -331,12 +335,15 @@ int main(int argc, char* argv[]) {
                 if (!author_image.empty()) {
                     builder.setAuthorImage(author_image);
                 }
+                if (!template_file.empty()) {
+                    builder.setTemplate(template_file);
+                }
                 for (const auto& [tag, list] : imageLists) {
-                    for (const auto& img : list.getImages()) {
-                        builder.addImageToList(tag, img.getPath());
+                    for (const auto& img : list->getImages()) {
+                        builder.addImageToList(tag, img->getPath());
                     }
                 }
-                TemplateWriter writer("template_vs.html", debug);
+                TemplateWriter writer(builder.getTemplatePath(), debug);
                 writer.writeToFile(output_filename, builder.getContents(), builder.getImageLists(), builder.getLabels(), builder.getAuthorImageBase64());
             } else {
                 std::cerr << "Unsupported format in JSON config: " << format << std::endl;
@@ -373,9 +380,7 @@ int main(int argc, char* argv[]) {
         if (format == "spice") {
             SPICEBuilder builder(DEFAULT_TITLE, debug);  // Usar título padrão
             builder.addTitle(DEFAULT_TITLE);
-            for (const auto& img : image_paths) {
-                builder.addImage(img);
-            }
+            builder.addImagesAsync(image_paths);  // Usar a versão assíncrona
             if (createLabelsFromImages) {
                 builder.generateLabelsFromImages();
             }
@@ -386,13 +391,16 @@ int main(int argc, char* argv[]) {
             if (!author_image_path.empty()) {
                 builder.setAuthorImage(author_image_path);
             }
+            if (!template_path.empty()) {
+                builder.setTemplate(template_path);
+            }
             for (size_t i = 0; i < imagePathsExtras.size(); ++i) {
                 std::string tag = "SPICE_IMAGES_" + std::to_string(i + 1);
                 for (const auto& img : imagePathsExtras[i]) {
                     builder.addImageToList(tag, img);
                 }
             }
-            TemplateWriter writer("template_vs.html", debug);
+            TemplateWriter writer(builder.getTemplatePath(), debug);
             writer.writeToFile(output_filename, builder.getContents(), builder.getImageLists(), builder.getLabels(), builder.getAuthorImageBase64());
         } else if (format == "gif") {
             if (!createGif(output_filename, image_paths, debug)) {
