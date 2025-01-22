@@ -1,7 +1,7 @@
 #include <windows.h>
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 0,266,0,0
+ FILEVERSION 0,267,0,0
  PRODUCTVERSION 0,0,0,0
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
@@ -19,7 +19,7 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "NEPEM-UFSC\0"
             VALUE "FileDescription", "TSIMG - Temporal Series Interactive Imager\0"
-            VALUE "FileVersion", "0.1.6.266\0"
+            VALUE "FileVersion", "0.1.6.267\0"
             VALUE "InternalName", "tsimg\0"
             VALUE "LegalCopyright", "Copyright 2025 UFSC\0"
             VALUE "OriginalFilename", "tsimg.exe\0"
