@@ -288,7 +288,7 @@ std::vector<std::unique_ptr<Image>>& ImageList::getImages() {
 std::string ImageList::generateImageTags() const {
     std::string imageTags;
     for (const auto& image : images) {
-        imageTags += "<img src=\"data:image/png;base64," + image->getBase64() + "\" alt=\"" + image->getPath() + "\">";
+        imageTags += "<img src=\"data:image/png;base64," + image->getBase64() + "\" alt=\"" + image->getPath() + "\" loading=\"lazy\">";
     }
     return imageTags;
 }
@@ -677,13 +677,9 @@ std::string TemplateWriter::replaceAllTags(const std::string& source, const std:
 std::string TemplateWriter::replaceObjectPlaceholders(const std::string& source, const std::map<std::string, std::unique_ptr<ImageList>>& imageLists) {
     std::string result = source;
     for (const auto& [tag, imageList] : imageLists) {
-        if (source.find("<" + tag + ">") == std::string::npos) {
-            if (debug) std::cerr << "Placeholder not found for tag: " + tag << std::endl;
-            continue;
-        }
-        std::string imageContent = !imageList->getImages().empty() ? imageList->generateImageTags() : "<p>No images available</p>";
-        result = replaceTag(result, "<" + tag + ">", imageContent);
-        if (debug) std::cout << "Replaced placeholder for tag: " + tag << std::endl;
+        std::string placeholder = "<" + tag + ">";
+        std::string replacement = imageList->generateImageTags();
+        result = replaceTag(result, placeholder, replacement);
     }
     return result;
 }
