@@ -241,6 +241,14 @@ namespace tsimg::utils {
         }
         return futures;
     }
+
+    std::string getTemplateContent(const std::string& templatePath, bool debug) {
+        std::string fullPath = templatePath;
+        if (templatePath.empty()) {
+            fullPath = TemplateWriter::getDefaultTemplatePath();
+        }
+        return FileHandler::readFile(fullPath, debug);
+    }
 }
 
 SpiceContent::SpiceContent(const std::string& tag, const std::string& baseHtml, const std::string& variableContent)
@@ -487,8 +495,17 @@ bool SPICEBuilder::hasAdditionalImages() const {
     return it != imageLists.end() && !it->second->getImages().empty();
 }
 
+SPICEBuilder& SPICEBuilder::setTemplate(const std::string& templatePath) {
+    this->templatePath = templatePath;
+    return *this;
+}
+
+const std::string& SPICEBuilder::getTemplatePath() const {
+    return templatePath;
+}
+
 TemplateWriter::TemplateWriter(const std::string& templatePath, bool debug) : templatePath(templatePath), debug(debug) {
-    templateContent = tsimg::utils::FileHandler::readFile(templatePath, debug);
+    templateContent = tsimg::utils::getTemplateContent(templatePath, debug);
 }
 
 // Melhorar TemplateWriter::writeToFile
@@ -743,4 +760,9 @@ std::string TemplateWriter::buildHtmlStructure(const SPICEBuilder& builder) {
     }
 
     return htmlContent;
+}
+
+std::string TemplateWriter::getDefaultTemplatePath() {
+    std::filesystem::path defaultPath = std::filesystem::current_path() / "templates" / "base_template.html";
+    return defaultPath.string();
 }

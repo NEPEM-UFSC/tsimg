@@ -109,6 +109,7 @@ void display_info() {
     std::cerr << "  -help_text <text>       Help text to display (optional)." << std::endl;
     std::cerr << "  -help_link <link>       Help link URL (optional)." << std::endl;
     std::cerr << "  -help_badge_url <url>   Help badge image URL (optional)." << std::endl;
+    std::cerr << "  -template <template_path> Path to custom HTML template (optional)." << std::endl;
 }
 
 bool validateJsonConfig(const nlohmann::json& config, bool debug) {
@@ -236,6 +237,7 @@ int main(int argc, char* argv[]) {
     std::string format = "spice";
     std::string json_config_file;
     std::string author_image_path;
+    std::string template_path;
 
     std::vector<std::vector<std::string>> imagePathsExtras;
 
@@ -271,6 +273,8 @@ int main(int argc, char* argv[]) {
             imagePathsExtras.push_back(split(argv[++i], ','));
         } else if (std::strncmp(argv[i], "-3", 2) == 0 && i + 1 < argc) {
             imagePathsExtras.push_back(split(argv[++i], ','));
+        } else if (std::strcmp(argv[i], "-template") == 0 && i + 1 < argc) {
+            template_path = argv[++i];
         }
     }
 
@@ -293,6 +297,7 @@ int main(int argc, char* argv[]) {
             help_link = config.value("help_link", "");
             help_badge_url = config.value("help_badge_url", "");
             std::string author_image = config.value("author_image", "");
+            std::string template_file = config.value("template", "");
 
             std::map<std::string, std::unique_ptr<ImageList>> imageLists;
             for (int i = 0; ; ++i) {
@@ -329,6 +334,9 @@ int main(int argc, char* argv[]) {
                 }
                 if (!author_image.empty()) {
                     builder.setAuthorImage(author_image);
+                }
+                if (!template_file.empty()) {
+                    builder.setTemplate(template_file);
                 }
                 for (const auto& [tag, list] : imageLists) {
                     for (const auto& img : list->getImages()) {
@@ -382,6 +390,9 @@ int main(int argc, char* argv[]) {
             }
             if (!author_image_path.empty()) {
                 builder.setAuthorImage(author_image_path);
+            }
+            if (!template_path.empty()) {
+                builder.setTemplate(template_path);
             }
             for (size_t i = 0; i < imagePathsExtras.size(); ++i) {
                 std::string tag = "SPICE_IMAGES_" + std::to_string(i + 1);

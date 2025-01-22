@@ -54,11 +54,13 @@ public:
     SPICEBuilder& setHelp(const std::string& helpText, const std::string& helpLink, const std::string& helpBadgeURL);
     SPICEBuilder& addTitle(const std::string& title);
     SPICEBuilder& addImagesAsync(const std::vector<std::string>& imagePaths);
+    SPICEBuilder& setTemplate(const std::string& templatePath);
     const std::vector<SpiceContent>& getContents() const;
     const std::map<std::string, std::unique_ptr<ImageList>>& getImageLists() const;
     const std::vector<std::string>& getLabels() const;
     const std::string& getAuthorImageBase64() const;
     const std::string& getTitle() const;
+    const std::string& getTemplatePath() const;
     std::string getImageTags() const;
     std::string generateImageTags() const;
     std::string generateLabelTags() const;
@@ -72,6 +74,7 @@ private:
     std::map<std::string, std::unique_ptr<ImageList>> imageLists;
     std::vector<std::string> labels;
     std::string authorImageBase64;
+    std::string templatePath;
 };
 
 class SPICE {
@@ -93,6 +96,7 @@ private:
 class TemplateWriter {
 public:
     TemplateWriter(const std::string& templatePath, bool debug);
+    static std::string getDefaultTemplatePath();
     void writeToFile(const std::string& outputFile, 
                      const std::vector<SpiceContent>& contents, 
                      const std::map<std::string, std::unique_ptr<ImageList>>& imageLists, 
@@ -168,4 +172,6 @@ namespace tsimg::utils {
     public:
         static std::vector<std::future<std::unique_ptr<Image>>> processImagesAsync(const std::vector<std::string>& imagePaths, bool debug);
     };
+
+    std::string getTemplateContent(const std::string& templatePath, bool debug);
 }
