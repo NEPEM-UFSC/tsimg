@@ -343,7 +343,7 @@ int main(int argc, char* argv[]) {
                         builder.addImageToList(tag, img->getPath());
                     }
                 }
-                TemplateWriter writer("template_vs.html", debug);
+                TemplateWriter writer(builder.getTemplatePath(), debug);
                 writer.writeToFile(output_filename, builder.getContents(), builder.getImageLists(), builder.getLabels(), builder.getAuthorImageBase64());
             } else {
                 std::cerr << "Unsupported format in JSON config: " << format << std::endl;
@@ -400,7 +400,7 @@ int main(int argc, char* argv[]) {
                     builder.addImageToList(tag, img);
                 }
             }
-            TemplateWriter writer("template_vs.html", debug);
+            TemplateWriter writer(builder.getTemplatePath(), debug);
             writer.writeToFile(output_filename, builder.getContents(), builder.getImageLists(), builder.getLabels(), builder.getAuthorImageBase64());
         } else if (format == "gif") {
             if (!createGif(output_filename, image_paths, debug)) {

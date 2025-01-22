@@ -506,15 +506,18 @@ const std::string& SPICEBuilder::getTemplatePath() const {
 
 TemplateWriter::TemplateWriter(const std::string& templatePath, bool debug) : templatePath(templatePath), debug(debug) {
     templateContent = tsimg::utils::getTemplateContent(templatePath, debug);
+    if (debug) {
+        std::cout << "Using template: " << (templatePath.empty() ? getDefaultTemplatePath() : templatePath) << std::endl;
+    }
 }
 
-// Melhorar TemplateWriter::writeToFile
 void TemplateWriter::writeToFile(const std::string& outputFile, 
                                  const std::vector<SpiceContent>& contents, 
                                  const std::map<std::string, std::unique_ptr<ImageList>>& imageLists, 
                                  const std::vector<std::string>& labels, 
                                  const std::string& authorImageBase64) {
     tsimg::utils::debugLog(debug, "Starting writeToFile process for: " + outputFile);
+    tsimg::utils::debugLog(debug, "Using template: " + (templatePath.empty() ? getDefaultTemplatePath() : templatePath));
 
     try {
         if (contents.empty()) {
