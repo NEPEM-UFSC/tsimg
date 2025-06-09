@@ -28,6 +28,7 @@ add_custom_target(generate_build_info ALL
     DEPENDS ${CMAKE_SOURCE_DIR}/src/build_info.h
 )
 
+# Definição das fontes principais do projeto
 set(SOURCES
     src/build_info.h
     src/main.cpp
@@ -43,6 +44,23 @@ add_executable(tsimg ${SOURCES})
 add_dependencies(tsimg generate_build_info)
 
 set_target_properties(tsimg PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
+    ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
+    LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
+)
+
+# Executável de teste - usar implementação mock em vez das originais
+add_executable(tsimg_test
+    src/tsimg_test.cpp
+    src/tsimg_test.h
+    src/build_info.h
+)
+
+# Garantir que as informações de build sejam geradas antes de compilar os testes
+add_dependencies(tsimg_test generate_build_info)
+
+# Definir propriedades do executável de teste
+set_target_properties(tsimg_test PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
     ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
     LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
