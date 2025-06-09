@@ -19,16 +19,88 @@
 #include <algorithm>
 
 // Definições para testes
+
+// Asserts that 'condition' is true.
+// If 'condition' is false, prints an error message including the condition string,
+// file, and line number, then causes the current test function to 'return false'.
 #define TSIMG_ASSERT(condition) \
     if (!(condition)) { \
-        std::cerr << "Assertion falhou: " << #condition << " em " << __FILE__ << ":" << __LINE__ << std::endl; \
+        std::cerr << "Assertion Failed: (" << #condition << ") is false in " << __FILE__ << ":" << __LINE__ << std::endl; \
         return false; \
     }
 
+// Asserts that 'expected' and 'actual' values are equal.
+// If they are not equal, prints an error message including the expressions for expected
+// and actual, their evaluated values, file, and line number, then causes the current
+// test function to 'return false'.
 #define TSIMG_ASSERT_EQ(expected, actual) \
     if ((expected) != (actual)) { \
-        std::cerr << "Assertion falhou: " << #expected << " == " << #actual << ", valores: " \
-                  << (expected) << " != " << (actual) << " em " << __FILE__ << ":" << __LINE__ << std::endl; \
+        std::cerr << "Assertion Failed: Expected (" << #expected << ") to be equal to Actual (" << #actual \
+                  << "), but Expected was: " << (expected) << " and Actual was: " << (actual) \
+                  << " in " << __FILE__ << ":" << __LINE__ << std::endl; \
+        return false; \
+    }
+
+// Helper para TSIMG_ASSERT_THROWS e TSIMG_ASSERT_THROWS_ANY
+namespace tsimg {
+namespace test {
+template<typename Func, typename ExceptionType>
+bool check_throws_specific(Func func, const char* expr_str, const char* exception_type_str, const char* file, int line) {
+    try {
+        func();
+    } catch (const ExceptionType& e) {
+        // Opcional: std::cout << "Caught expected exception: " << e.what() << std::endl;
+        return true; // Teste passa
+    } catch (const std::exception& e) {
+        std::cerr << "Assertion Failed: Expected exception of type " << exception_type_str
+                  << " to be thrown by (" << expr_str << "), but a different std::exception was thrown: "
+                  << e.what() << " in " << file << ":" << line << std::endl;
+        return false; // Teste falha
+    } catch (...) {
+        std::cerr << "Assertion Failed: Expected exception of type " << exception_type_str
+                  << " to be thrown by (" << expr_str << "), but a non-standard exception was thrown in "
+                  << file << ":" << line << std::endl;
+        return false; // Teste falha
+    }
+    std::cerr << "Assertion Failed: Expected exception of type " << exception_type_str
+              << " not thrown by (" << expr_str << ") in " << file << ":" << line << std::endl;
+    return false; // Teste falha
+}
+
+template<typename Func>
+bool check_throws_any(Func func, const char* expr_str, const char* file, int line) {
+    try {
+        func();
+    } catch (const std::exception& e) {
+        // Opcional: std::cout << "Caught expected exception: " << e.what() << std::endl;
+        return true; // Teste passa
+    } catch (...) {
+        // Opcional: std::cout << "Caught expected non-standard exception." << std::endl;
+        return true; // Teste passa para qualquer exceção
+    }
+    std::cerr << "Assertion Failed: Expected any exception to be thrown by (" << expr_str 
+              << "), but no exception was thrown in " << file << ":" << line << std::endl;
+    return false; // Teste falha
+}
+} // namespace test
+} // namespace tsimg
+
+// Asserts that executing 'expression' throws an exception of type 'ExceptionType'.
+// If 'expression' executes without throwing an exception, or if it throws an exception
+// of a different type than 'ExceptionType', an error message is printed (including the
+// expression, expected exception type, file, and line number), and the current test
+// function 'return false'.
+#define TSIMG_ASSERT_THROWS(expression, ExceptionType) \
+    if (!tsimg::test::check_throws_specific([&]() { expression; }, #expression, #ExceptionType, __FILE__, __LINE__)) { \
+        return false; \
+    }
+
+// Asserts that executing 'expression' throws any type of exception.
+// If 'expression' executes without throwing any exception, an error message is printed
+// (including the expression, file, and line number), and the current test function
+// 'return false'.
+#define TSIMG_ASSERT_THROWS_ANY(expression) \
+    if (!tsimg::test::check_throws_any([&]() { expression; }, #expression, __FILE__, __LINE__)) { \
         return false; \
     }
 
@@ -89,6 +161,10 @@ public:
 namespace tsimg {
     namespace test {
         
+        // Test functions are typically of the form 'bool my_test_function()' and should use the
+        // TSIMG_ASSERT_XXX macros for checks. A macro failure will 'return false' from the function.
+        // Returning 'true' indicates all assertions passed.
+
         // Utilitários para testes
         class TestUtils {
         public:

@@ -16,7 +16,8 @@ bool test_temp_file_write_and_read() {
     std::getline(in, readContent);
     in.close();
     tsimg::test::TestUtils::removeFile(tempPath);
-    return readContent == testContent;
+    TSIMG_ASSERT_EQ(testContent, readContent);
+    return true;
 }
 
 // Teste para adicionar conteúdo vazio ao SPICEBuilder
@@ -38,9 +39,10 @@ bool test_spice_builder_add_duplicate_image() {
     builder.addImage(imagePaths[0]);
     const auto& imageLists = builder.getImageLists();
     auto it = imageLists.find("SPICE_IMAGES");
-    if (it == imageLists.end()) return false;
+    TSIMG_ASSERT(it != imageLists.end());
     // Espera-se que ambas as imagens estejam presentes (ou apenas uma, dependendo da implementação)
-    return !it->second->getImages().empty();
+    TSIMG_ASSERT(!it->second->getImages().empty());
+    return true;
 }
 
 // Teste para adicionar label duplicado ao SPICEBuilder
@@ -85,7 +87,9 @@ bool test_image_validation() {
     std::string invalidPath = "imagem_inexistente.jpg";
     bool invalidRejected = !tsimg::utils::ImageValidator::validateImagePath(invalidPath, true);
     
-    return anyValid && invalidRejected;
+    TSIMG_ASSERT(anyValid);
+    TSIMG_ASSERT(invalidRejected);
+    return true;
 }
 
 // Teste para codificação Base64
@@ -100,31 +104,22 @@ bool test_base64_encoding() {
     std::string base64 = encodeImageToBase64(imagePaths[0], true);
     
     // Verificar que a codificação não está vazia
-    if (base64.empty()) {
-        std::cerr << "A codificação Base64 retornou vazia" << std::endl;
-        return false;
-    }
+    TSIMG_ASSERT(!base64.empty());
     
     // Verificar se a string começa com o prefixo data:image/ que é característico de Base64 de imagens
-    if (base64.find("data:image/") != 0) {
-        std::cerr << "A codificação Base64 não tem o formato adequado" << std::endl;
-        return false;
-    }
+    TSIMG_ASSERT(base64.find("data:image/") == 0);
     
     // Encontrar a parte Base64 real (após a vírgula em "data:image/jpeg;base64,")
     size_t commaPos = base64.find(',');
-    if (commaPos == std::string::npos) {
-        std::cerr << "Formato Base64 inválido, vírgula não encontrada" << std::endl;
-        return false;
-    }
+    TSIMG_ASSERT(commaPos != std::string::npos);
     
     // Obter a parte Base64 real
     std::string realBase64 = base64.substr(commaPos + 1);
     
     // A parte de validação dos caracteres não é necessária para o teste mock
     // já que estamos usando uma string Base64 fixa
-    
-    return !realBase64.empty();
+    TSIMG_ASSERT(!realBase64.empty());
+    return true;
 }
 
 // Testes para SPICEBuilder
@@ -225,7 +220,9 @@ bool test_gif_creation() {
     // Limpar
     tsimg::test::TestUtils::removeFile(outputPath);
     
-    return created && exists;
+    TSIMG_ASSERT(created);
+    TSIMG_ASSERT(exists);
+    return true;
 }
 
 // Testes de integração para fluxo completo do SPICE
@@ -284,7 +281,11 @@ bool test_spice_full_pipeline() {
         file.close();
         tsimg::test::TestUtils::removeFile(outputPath);
         
-        return exists && hasTitle && hasText && hasImageData;
+        TSIMG_ASSERT(exists);
+        TSIMG_ASSERT(hasTitle);
+        TSIMG_ASSERT(hasText);
+        TSIMG_ASSERT(hasImageData);
+        return true;
     } catch (const std::exception& e) {
         std::cerr << "Exceção: " << e.what() << std::endl;
         
@@ -324,7 +325,8 @@ bool test_performance_base64_encoding() {
     std::cout << "Tempo médio de codificação Base64: " << averageMs << "ms" << std::endl;
     
     // Verificar que o tempo médio é aceitável (por exemplo, menos de 500ms)
-    return averageMs < 500.0;
+    TSIMG_ASSERT(averageMs < 500.0);
+    return true;
 }
 
 bool test_performance_image_processing() {
@@ -351,7 +353,8 @@ bool test_performance_image_processing() {
     std::cout << "Tempo médio de processamento de imagem: " << averageMs << "ms" << std::endl;
     
     // Verificar que o tempo médio é aceitável (por exemplo, menos de 1000ms por imagem)
-    return averageMs < 1000.0;
+    TSIMG_ASSERT(averageMs < 1000.0);
+    return true;
 }
 
 // Ponto de entrada principal para os testes
