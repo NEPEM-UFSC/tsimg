@@ -19,8 +19,14 @@ add_custom_command(
     OUTPUT ${CMAKE_SOURCE_DIR}/src/build_info.h
     COMMAND ${CMAKE_COMMAND} -E echo "Generating build info"
     COMMAND ${CMAKE_COMMAND} -E env python ${CMAKE_SOURCE_DIR}/utils/generate_build_info.py
-    DEPENDS ${CMAKE_SOURCE_DIR}/utils/generate_build_info.py
+    DEPENDS 
+        ${CMAKE_SOURCE_DIR}/utils/generate_build_info.py 
+        ${CMAKE_SOURCE_DIR}/src/main.cpp 
+        ${CMAKE_SOURCE_DIR}/src/tsimg_gif.cpp 
+        ${CMAKE_SOURCE_DIR}/src/tsimg_spice.cpp
+        ${CMAKE_SOURCE_DIR}/CMakeLists.txt
     COMMENT "Generating build info"
+    VERBATIM
 )
 
 # Add a custom target to always run the build info generation
@@ -28,14 +34,29 @@ add_custom_target(generate_build_info ALL
     DEPENDS ${CMAKE_SOURCE_DIR}/src/build_info.h
 )
 
+# Force regeneration by removing the output file before each build
+add_custom_target(clean_build_info
+    COMMAND ${CMAKE_COMMAND} -E remove -f ${CMAKE_SOURCE_DIR}/src/build_info.h
+    COMMENT "Cleaning build info for regeneration"
+)
+
+add_dependencies(generate_build_info clean_build_info)
+
 # Definição das fontes principais do projeto
 set(SOURCES
     src/build_info.h
     src/main.cpp
     src/tsimg_gif.cpp
     src/tsimg_spice.cpp
-    version.rc
 )
+
+# Adicionar version.rc apenas se existir
+if(EXISTS ${CMAKE_SOURCE_DIR}/version.rc)
+    list(APPEND SOURCES version.rc)
+    message(STATUS "Found version.rc, adding to sources")
+else()
+    message(STATUS "version.rc not found, skipping")
+endif()
 
 # Define the executable
 add_executable(tsimg ${SOURCES})
