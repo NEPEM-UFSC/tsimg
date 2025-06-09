@@ -129,3 +129,5 @@ dkms.conf
 /utils/convert_to_spice.py
 
 tsimg.code-workspace
+
+/test/images
