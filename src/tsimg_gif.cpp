@@ -8,7 +8,7 @@
 #include <iostream>
 #include <fstream>
 
-bool createGif(const std::string& output_filename, const std::vector<std::string>& image_paths, bool debug) {
+bool createGif(const std::string& output_filename, const std::vector<std::string>& image_paths, bool debug, int delay, bool loop, int quality) {
     if (image_paths.empty()) {
         if (debug) std::cerr << "Error: No images provided." << std::endl;
         return false;
@@ -26,7 +26,8 @@ bool createGif(const std::string& output_filename, const std::vector<std::string
     if (debug) std::cout << "First image loaded successfully. Dimensions: " << width << "x" << height << std::endl;
 
     GifWriter gif;
-    if (!GifBegin(&gif, output_filename.c_str(), width, height, 100)) {
+    int gif_loop = loop ? 0 : 1; // 0 = loop infinito, 1 = sem loop (ajuste conforme a lib gif.h)
+    if (!GifBegin(&gif, output_filename.c_str(), width, height, delay, gif_loop)) {
         if (debug) std::cerr << "Failed to initialize GIF: " << output_filename << std::endl;
         return false;
     }
@@ -47,7 +48,8 @@ bool createGif(const std::string& output_filename, const std::vector<std::string
         std::vector<uint8_t> resized_image(width * height * 4);
         stbir_resize_uint8_linear(image_data, img_width, img_height, 0, resized_image.data(), width, height, 0, (stbir_pixel_layout)4);
 
-        GifWriteFrame(&gif, resized_image.data(), width, height, 100);
+        // O parâmetro 'quality' não é suportado diretamente pela gif.h, mas pode ser usado para compressão futura
+        GifWriteFrame(&gif, resized_image.data(), width, height, delay);
 
         stbi_image_free(image_data);
     }

@@ -252,31 +252,29 @@ namespace tsimg::utils {
     }
 }
 
-SpiceContent::SpiceContent(const std::string& tag, const std::string& baseHtml, const std::string& variableContent)
-    : tag(tag), baseHtml(baseHtml), variableContent(variableContent) {}
+SpiceContent::SpiceContent(const std::string& tag, const std::string& content)
+    : tag(tag), variableContent(content) {}
 
-std::string SpiceContent::getTag() const {
+const std::string& SpiceContent::getTag() const {
     return tag;
 }
 
-std::string SpiceContent::getBaseHtml() const {
-    return baseHtml;
-}
-
-std::string SpiceContent::getVariableContent() const {
+const std::string& SpiceContent::getVariableContent() const {
     return variableContent;
 }
 
-Image::Image(const std::string& path, const std::string& base64)
-    : path(path), base64(base64) {}
+Image::Image(const std::string& path, const std::string& base64Data)
+    : path(path), base64Data(base64Data) {}
 
-std::string Image::getPath() const {
+const std::string& Image::getPath() const {
     return path;
 }
 
-std::string Image::getBase64() const {
-    return base64;
+std::string Image::toBase64() const {
+    return base64Data;
 }
+
+Image::~Image() = default;
 
 void ImageList::addImage(std::unique_ptr<Image> image) {
     images.push_back(std::move(image));
@@ -287,12 +285,15 @@ std::vector<std::unique_ptr<Image>>& ImageList::getImages() {
 }
 
 std::string ImageList::generateImageTags() const {
-    std::string imageTags;
+    std::string imageTags = "";
     for (const auto& image : images) {
-        imageTags += "<img src=\"data:image/png;base64," + image->getBase64() + "\" alt=\"" + image->getPath() + "\" loading=\"lazy\">";
+        imageTags += "<img src=\"data:image/png;base64," + image->toBase64() + "\" alt=\"" + image->getPath() + "\" loading=\"lazy\">";
     }
     return imageTags;
 }
+
+ImageList::ImageList() = default;
+ImageList::~ImageList() = default;
 
 SPICE::SPICE(const std::string& title, bool debug)
     : title(title), debug(debug) {}
@@ -360,12 +361,15 @@ SPICEBuilder& SPICEBuilder::addImagesAsync(const std::vector<std::string>& image
     for (auto& future : futures) {
         try {
             auto img = future.get();
-            if (!img->getBase64().empty()) {
+            if (img && !img->toBase64().empty()) { 
                 if (imageLists.find("SPICE_IMAGES") == imageLists.end()) {
                     imageLists["SPICE_IMAGES"] = std::make_unique<ImageList>();
                 }
                 imageLists["SPICE_IMAGES"]->addImage(std::move(img));
-                tsimg::utils::debugLog(debug, "Image added successfully: " + img->getPath());
+            } else if (img) {
+                tsimg::utils::errorLog(debug, "Failed to add image, Base64 data is empty for: " + img->getPath());
+            } else {
+                tsimg::utils::errorLog(debug, "Failed to process an image, future returned null.");
             }
         } catch (const std::exception& e) {
             tsimg::utils::errorLog(debug, "Failed to add image: " + std::string(e.what()));
@@ -377,7 +381,7 @@ SPICEBuilder& SPICEBuilder::addImagesAsync(const std::vector<std::string>& image
 
 SPICEBuilder& SPICEBuilder::addImageToList(const std::string& listTag, const std::string& imagePath) {
     if (debug) std::cout << "Adding image to " << listTag << ": " << imagePath << std::endl;
-    std::string base64Image = encodeImageToBase64(imagePath, debug);
+    std::string base64Image = encodeImageToBase64(imagePath, debug); // Esta função é de tsimg_gif.cpp
     if (!base64Image.empty()) {
         if (imageLists.find(listTag) == imageLists.end()) {
             imageLists[listTag] = std::make_unique<ImageList>();
@@ -393,7 +397,7 @@ SPICEBuilder& SPICEBuilder::addImageToList(const std::string& listTag, const std
 SPICEBuilder& SPICEBuilder::addContent(const std::string& tag, const std::string& content) {
     if (debug) std::cout << "Adding content to tag <" << tag << ">: " << content << std::endl;
     
-    contents.push_back(SpiceContent(tag, "", content));
+    contents.push_back(SpiceContent(tag, content)); // Corrigido para 2 argumentos
     
     if (debug) std::cout << "Content added successfully." << std::endl;
     return *this;
@@ -430,18 +434,18 @@ SPICEBuilder& SPICEBuilder::setAuthorImage(const std::string& imagePath) {
 }
 
 SPICEBuilder& SPICEBuilder::setHelp(const std::string& helpText, const std::string& helpLink, const std::string& helpBadgeURL) {
-    contents.push_back(SpiceContent("SPICE_HELP_TEXT", "", helpText));
+    contents.push_back(SpiceContent("SPICE_HELP_TEXT", helpText)); // Corrigido para 2 argumentos
     if (debug) std::cout << "Help text set successfully." << std::endl;
 
-    std::string helpContent = "<a href=\"" + helpLink + "\"><img src=\"" + helpBadgeURL + "\" alt=\"Help Badge\"></a>";
-    contents.push_back(SpiceContent("SPICE_HELP_CONTENT", "", helpContent));
+    std::string helpContentString = "<a href=\"" + helpLink + "\"><img src=\"" + helpBadgeURL + "\" alt=\"Help Badge\"></a>";
+    contents.push_back(SpiceContent("SPICE_HELP_CONTENT", helpContentString)); // Corrigido para 2 argumentos
     if (debug) std::cout << "Help content set successfully." << std::endl;
     return *this;
 }
 
 SPICEBuilder& SPICEBuilder::addTitle(const std::string& title) {
     if (debug) std::cout << "Adding title: " << title << std::endl;
-    contents.push_back(SpiceContent("SPICE_TITLE", "", title));
+    contents.push_back(SpiceContent("SPICE_TITLE", title)); // Corrigido para 2 argumentos
     if (debug) std::cout << "Title added successfully." << std::endl;
     return *this;
 }
@@ -578,13 +582,14 @@ void TemplateWriter::writeToFile(const std::string& outputFile,
         // Cria a seção de ajuda apenas se todas as informações estiverem presentes
         std::string helpSection = tsimg::utils::HTMLBuilder::createHelpSection(
             helpText,
-            helpBadgeUrl,
+            helpBadgeUrl, // Este deveria ser o conteúdo do badge, não a URL direta se for só imagem
             helpLink
         );
 
         // Se não houver seção de ajuda, remove a tag completamente
         if (helpSection.empty()) {
             // Remove a tag e qualquer div container que a contenha
+            // Tentativa de remover uma div específica. Pode precisar de ajuste se a estrutura do template for diferente.
             size_t startPos = outputContent.find("<div class=\"help-section\">");
             if (startPos != std::string::npos) {
                 size_t endPos = outputContent.find("</div>", startPos);
@@ -593,21 +598,19 @@ void TemplateWriter::writeToFile(const std::string& outputFile,
                     outputContent.erase(startPos, endPos - startPos);
                 }
             }
+            // Se a tag SPICE_HELP_SECTION existir, também a remove.
             outputContent = replaceTag(outputContent, "<SPICE_HELP_SECTION>", "");
         } else {
             outputContent = replaceTag(outputContent, "<SPICE_HELP_SECTION>", helpSection);
         }
 
-        // Adicionar substituição do SPICE_BUILDING_INFO
-        outputContent = replaceTag(outputContent, "<SPICE_BUILDING_INFO>", generateBuildInfo());
 
         tsimg::utils::FileHandler::writeFile(outputFile, outputContent, debug);
-        
         tsimg::utils::debugLog(debug, "File written successfully: " + outputFile);
-        
+
     } catch (const std::exception& e) {
-        tsimg::utils::errorLog(debug, "Error in writeToFile: " + std::string(e.what()));
-        throw; // Re-throw para permitir tratamento em nível superior
+        tsimg::utils::errorLog(debug, std::string("Error writing to file: ") + e.what());
+        throw; // Re-throw a exceção para que o chamador possa lidar com ela
     }
 }
 
@@ -669,11 +672,32 @@ std::string TemplateWriter::replaceTag(const std::string& source, const std::str
 }
 
 bool TemplateWriter::validateImageListAndLabels(const std::map<std::string, std::unique_ptr<ImageList>>& imageLists, const std::vector<std::string>& labels) {
-    for (const auto& [tag, imageList] : imageLists) {
-        if (imageList->getImages().size() != labels.size()) {
-            return false;
-        }
+    // Se não houver labels, qualquer número de imagens é válido
+    if (labels.empty()) {
+        return true;
     }
+    
+    // Verifica a lista principal SPICE_IMAGES
+    auto mainList = imageLists.find("SPICE_IMAGES");
+    if (mainList != imageLists.end()) {
+        // A lista SPICE_IMAGES deve ter o mesmo número de imagens que labels
+        return mainList->second->getImages().size() == labels.size();
+    }
+    
+    // Se não existir SPICE_IMAGES, verifica a primeira lista disponível
+    if (!imageLists.empty()) {
+        // Verificar se pelo menos uma lista tem o tamanho correto
+        for (const auto& [tag, list] : imageLists) {
+            if (list->getImages().size() == labels.size()) {
+                // Se encontrarmos uma lista com tamanho compatível, consideramos válido
+                return true;
+            }
+        }
+        
+        // Se nenhuma lista tiver o tamanho certo, retorna falso
+        return false;
+    }
+    
     return true;
 }
 
@@ -688,7 +712,13 @@ std::string TemplateWriter::replaceAllTags(const std::string& source, const std:
 std::string TemplateWriter::replaceObjectPlaceholders(const std::string& source, const std::map<std::string, std::unique_ptr<ImageList>>& imageLists) {
     std::string result = source;
     for (const auto& [tag, imageList] : imageLists) {
-        std::string placeholder = "<" + tag + ">";
+        // Verifica se a tag já começa com "SPICE_" - se não, adiciona o prefixo
+        std::string formattedTag = tag;
+        if (tag.substr(0, 6) != "SPICE_") {
+            formattedTag = "SPICE_" + tag;
+        }
+        
+        std::string placeholder = "<" + formattedTag + ">";
         std::string replacement = imageList->generateImageTags();
         result = replaceTag(result, placeholder, replacement);
     }
