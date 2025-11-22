@@ -10,69 +10,122 @@
 #include "tsimg_spice.h" 
 #include "tsimg_gif.h"
 #include "build_info.h"
+#include "core/TSIMGPipeline.h"
+#include "utils/ConfigManager.h"
 
+// Constantes globais
 const std::string DEFAULT_TITLE = "TSIMG Presentation";
 const std::string APP_NAME = "Temporal Series Interactive Imager";
 
-std::vector<std::string> split(const std::string& str, char delimiter) {
-    std::vector<std::string> tokens;
-    std::string token;
-    std::istringstream token_stream(str);
-    while (std::getline(token_stream, token, delimiter)) {
-        token.erase(0, token.find_first_not_of(' '));
-        token.erase(token.find_last_not_of(' ') + 1);
-        tokens.push_back(token);
-    }
-    return tokens;
-}
+// Definição de namespace tsimg para funções utilitárias
+namespace tsimg::utils {
 
-std::string concatenateStrings(const std::vector<std::string>& vec) {
-    std::ostringstream oss;
-    for (const auto& str : vec) {
-        oss << str;
-    }
-    return oss.str();
-}
-
-std::string readFileToString(const std::string& filepath, bool debug) {
-    if (debug) std::cout << "Reading file: " << filepath << std::endl;
-    std::ifstream file(filepath);
-    if (!file.is_open()) {
-        std::cerr << "Error while trying to open the template file: " << filepath << std::endl;
-        return "";
-    }
-    std::stringstream buffer;
-    buffer << file.rdbuf();
-    
-    if (debug) std::cout << "File read successfully." << std::endl;
-    return buffer.str();
-}
-
-nlohmann::json read_json_file(const std::string& filename, bool debug) {
-    if (debug) {
-        std::cout << "Reading JSON config file: " << filename << std::endl;
-    }
-    std::ifstream file(filename);
-    if (!file.is_open()) {
-        throw std::runtime_error("Could not open JSON file: " + filename);
+    // Função para dividir uma string em tokens
+    std::vector<std::string> split(const std::string& str, char delimiter) {
+        std::vector<std::string> tokens;
+        std::string token;
+        std::istringstream token_stream(str);
+        while (std::getline(token_stream, token, delimiter)) {
+            token.erase(0, token.find_first_not_of(' '));
+            token.erase(token.find_last_not_of(' ') + 1);
+            tokens.push_back(token);
+        }
+        return tokens;
     }
 
-    nlohmann::json json_data;
-    file >> json_data;
-
-    if (debug) {
-        std::cout << "JSON file read successfully: " << filename << std::endl;
+    // Função para concatenar strings
+    std::string concatenateStrings(const std::vector<std::string>& vec) {
+        std::ostringstream oss;
+        for (const auto& str : vec) {
+            oss << str;
+        }
+        return oss.str();
     }
-    return json_data;
-}
 
-std::string help_text;
-std::string help_badge_url;
-std::string help_link;
+    // Função para ler um arquivo para string com tratamento de erro aprimorado
+    std::string readFileToString(const std::string& filepath, bool debug) {
+        if (debug) std::cout << "Reading file: " << filepath << std::endl;
+        
+        if (!std::filesystem::exists(filepath)) {
+            throw std::runtime_error("File does not exist: " + filepath);
+        }
 
-bool app_info = false;
+        std::ifstream file(filepath);
+        if (!file.is_open()) {
+            throw std::runtime_error("Error while trying to open file: " + filepath);
+        }
+        
+        std::stringstream buffer;
+        buffer << file.rdbuf();
+        
+        if (debug) std::cout << "File read successfully." << std::endl;
+        return buffer.str();
+    }
 
-void display_info() {
+
+
+    // Classe para gerenciar configurações globais e ambiente
+    class Environment {
+    public:
+        static void setupEnvironment() {
+            // Verificar pastas críticas e criar se não existirem
+            std::filesystem::path templatesPath = std::filesystem::current_path() / "templates";
+            if (!std::filesystem::exists(templatesPath)) {
+                std::filesystem::create_directory(templatesPath);
+            }
+
+            std::filesystem::path outputPath = std::filesystem::current_path() / "output";
+            if (!std::filesystem::exists(outputPath)) {
+                std::filesystem::create_directory(outputPath);
+            }
+        }
+    };
+
+
+
+    // Logger para centralizar logs
+    class Logger {
+    public:
+        static void debug(bool debugEnabled, const std::string& message) {
+            if (debugEnabled) {
+                std::cout << "[DEBUG] " << message << std::endl;
+            }
+        }
+
+        static void info(const std::string& message) {
+            std::cout << "[INFO] " << message << std::endl;
+        }
+
+        static void error(const std::string& message) {
+            std::cerr << "[ERROR] " << message << std::endl;
+        }
+    };
+
+    // Cache para evitar reprocessamento de imagens
+    // MOVIDA PARA TSIMG_SPICE.H
+    // class ImageCache {
+    // private:
+    //     static std::map<std::string, std::shared_ptr<Image>> cache;
+    // public:
+    //     static std::shared_ptr<Image> getImage(const std::string& path, bool debug);
+    //     static void clearCache();
+    // };
+
+    // Inicialização do mapa de cache
+    // MOVIDA PARA TSIMG_SPICE.CPP OU ONDE ImageCache É DEFINIDA
+    // std::map<std::string, std::shared_ptr<Image>> ImageCache::cache;
+
+} // namespace tsimg::utils
+
+// Variáveis globais para ajuda
+// Removidas para evitar estado global
+// std::string help_text;
+// std::string help_badge_url;
+// std::string help_link;
+// bool app_info = false;
+
+// Função para exibir informações do aplicativo e ajuda
+void display_info(bool app_info) {
     if (app_info) {
         std::cout << "===================================================\n" << std::endl;
         std::cout << " /$$$$$$$$  /$$$$$$  /$$$$$$ /$$      /$$  /$$$$$$ " << std::endl;
@@ -84,17 +137,14 @@ void display_info() {
         std::cout << "   | $$   |  $$$$$$/ /$$$$$$| $$ \\/  | $$|  $$$$$$/" << std::endl;
         std::cout << "   |__/    \\______/ |______/|__/     |__/ \\______/ " << std::endl;
         std::cout << "\n===================================================" << std::endl;
-        std::cout << " \nTemporal Series Interactive Imager (TSIMG)\n" << std::endl;
+        std::cout << " \nTemporal Series Interactive Imager (TSIMG) v" << tsimg::getVersion() << "\n" << std::endl;
         std::cout << "===================================================" << std::endl;
         std::cout << "\n A tool for creating interactive images of time series." << std::endl;
         std::cout << "Supports export to SPICE and GIF formats." << std::endl;
         std::cout << "For more information, please visit: \nhttps://github.com/NEPEM-UFSC/tsimg" << std::endl;
         std::cout << "\n===================================================\n" << std::endl;
-        #ifdef BUILD_INFO
-            std::cout << BUILD_INFO << std::endl;
-        #else
-            std::cout << "Build information not available." << std::endl;
-        #endif
+        
+        std::cout << tsimg::getBuildInfo() << std::endl;
     }
     std::cerr << "Usage: create_file -n <output_filename> -i <image1.jpg,image2.png,...> [-l <label1,label2,...>] [-f <format>] [-debug] [-config <config.json>]" << std::endl;
     std::cerr << "Options:" << std::endl;
@@ -103,15 +153,17 @@ void display_info() {
     std::cerr << "  -l <labels>             Comma-separated list of labels (optional)." << std::endl;
     std::cerr << "  -f <format>             Output format: 'spice' or 'gif' (default: 'spice')." << std::endl;
     std::cerr << "  -debug                  Enable debug mode (optional)." << std::endl;
-    std::cerr << "  --config <config.json>   Path to JSON config file (optional)." << std::endl;
-    std::cerr << "  --labelbyname           Generate labels from image names (optional)." << std::endl;
-    std::cerr << "  -author_image <author_image_path>   Path to author image (optional)." << std::endl;
+    std::cerr << "  -config <config.json>   Path to JSON config file (optional)." << std::endl;
+    std::cerr << "  -labelbyname           Generate labels from image names (optional)." << std::endl;
+    std::cerr << "  -authorimage <author_image_path>   Path to author image (optional)." << std::endl;
     std::cerr << "  -help_text <text>       Help text to display (optional)." << std::endl;
     std::cerr << "  -help_link <link>       Help link URL (optional)." << std::endl;
     std::cerr << "  -help_badge_url <url>   Help badge image URL (optional)." << std::endl;
     std::cerr << "  -template <template_path> Path to custom HTML template (optional)." << std::endl;
+    std::cerr << "  -title <title>          Title for the presentation (optional)." << std::endl;
 }
 
+// Função para validar configuração JSON com validação mais robusta
 bool validateJsonConfig(const nlohmann::json& config, bool debug) {
     // Verificar campos obrigatórios
     const std::vector<std::string> required = {"export_format", "output_filename"};
@@ -154,263 +206,129 @@ bool validateJsonConfig(const nlohmann::json& config, bool debug) {
     return true;
 }
 
-int main(int argc, char* argv[]) {
-    if (argc == 1) {
-        // Modo Interativo
-        app_info = true;
-        display_info();
+// Função para modo interativo aprimorado
+bool runInteractiveMode() {
+    display_info(true);
 
-        std::cout << "Por favor, insira os parâmetros necessários." << std::endl;
+    tsimg::utils::debugLog(true, "Por favor, insira os parâmetros necessários.");
 
-        std::string output_filename;
-        std::string images_input;
-        std::string labels_input;
-        std::string format = "spice";
-        bool debug = false;
-        std::string json_config_file;
-        std::string title;  // Novo campo para título
+    tsimg::utils::ConfigManager configManager;
+    nlohmann::json config;
 
-        // Adicionar prompt para título
-        std::cout << "Título da apresentação (pressione Enter para usar o padrão): ";
-        std::getline(std::cin, title);
-        if (title.empty()) {
-            title = DEFAULT_TITLE;
-        }
-
-        std::cout << "Nome do arquivo de saída: ";
-        std::getline(std::cin, output_filename);
-
-        std::cout << "Caminhos das imagens (separados por vírgula): ";
-        std::getline(std::cin, images_input);
-        std::vector<std::string> image_paths = split(images_input, ',');
-
-        std::cout << "Labels (opcional, separados por vírgula): ";
-        std::getline(std::cin, labels_input);
-        std::vector<std::string> labels = split(labels_input, ',');
-
-        std::cout << "Formato de exportação ('spice' ou 'gif', padrão: 'spice'): ";
-        std::string format_input;
-        std::getline(std::cin, format_input);
-        if (!format_input.empty()) {
-            format = format_input;
-        }
-
-        std::cout << "Ativar modo debug? (s/n): ";
-        std::string debug_input;
-        std::getline(std::cin, debug_input);
-        if (debug_input == "s" || debug_input == "S") {
-            debug = true;
-        }
-
-        // Processamento dos dados de entrada
-        try {
-            if (format == "spice") {
-                SPICEBuilder builder(title, debug);
-                builder.addTitle(title);  // Usar o mesmo título
-                builder.addImagesAsync(image_paths);  // Usar a versão assíncrona
-                builder.addLabels(labels);
-                TemplateWriter writer("template_vs.html", debug);
-                writer.writeToFile(output_filename, builder.getContents(), builder.getImageLists(), builder.getLabels(), builder.getAuthorImageBase64());
-                std::cout << "Arquivo SPICE gerado com sucesso: " << output_filename << std::endl;
-            } else if (format == "gif") {
-                if (createGif(output_filename, image_paths, debug)) {
-                    std::cout << "Arquivo GIF gerado com sucesso: " << output_filename << std::endl;
-                } else {
-                    std::cerr << "Falha ao criar o arquivo GIF: " << output_filename << std::endl;
-                }
-            } else {
-                std::cerr << "Formato não suportado: " << format << std::endl;
-                return 1;
-            }
-        } catch (const std::exception& e) {
-            std::cerr << "Erro durante o processamento: " << e.what() << std::endl;
-            return 1;
-        }
-
-        return 0;
-    }
-    std::string output_filename;
-    std::vector<std::string> image_paths;
-    std::vector<std::string> labels;
-    bool debug = false;
-    bool createLabelsFromImages = false;
-    std::string format = "spice";
-    std::string json_config_file;
-    std::string author_image_path;
-    std::string template_path;
-
-    std::vector<std::vector<std::string>> imagePathsExtras;
-
-    for (int i = 1; i < argc; ++i) {
-        if (std::strcmp(argv[i], "-info") == 0) {
-            app_info=true;
-            display_info();
-            app_info=false;
-            return 0;
-        } else if (std::strcmp(argv[i], "-n") == 0 && i + 1 < argc) {
-            output_filename = argv[++i];
-        } else if (std::strcmp(argv[i], "-i") == 0 && i + 1 < argc) {
-            image_paths = split(argv[++i], ',');
-        } else if (std::strcmp(argv[i], "-l") == 0 && i + 1 < argc) {
-            labels = split(argv[++i], ',');
-        } else if (std::strcmp(argv[i], "-debug") == 0) {
-            debug = true;
-        } else if (std::strcmp(argv[i], "-f") == 0 && i + 1 < argc) {
-            format = argv[++i];
-        } else if (std::strcmp(argv[i], "-config") == 0 && i + 1 < argc) {
-            json_config_file = argv[++i];
-        } else if (std::strcmp(argv[i], "-labelbyname") == 0) {
-            createLabelsFromImages = true;
-        } else if (std::strcmp(argv[i], "-authorimage") == 0 && i + 1 < argc) {
-            author_image_path = argv[++i];
-        } else if (std::strcmp(argv[i], "-help_text") == 0 && i + 1 < argc) {
-            help_text = argv[++i];
-        } else if (std::strcmp(argv[i], "-help_link") == 0 && i + 1 < argc) {
-            help_link = argv[++i];
-        } else if (std::strcmp(argv[i], "-help_badge_url") == 0 && i + 1 < argc) {
-            help_badge_url = argv[++i];
-        } else if (std::strncmp(argv[i], "-2", 2) == 0 && i + 1 < argc) {
-            imagePathsExtras.push_back(split(argv[++i], ','));
-        } else if (std::strncmp(argv[i], "-3", 2) == 0 && i + 1 < argc) {
-            imagePathsExtras.push_back(split(argv[++i], ','));
-        } else if (std::strcmp(argv[i], "-template") == 0 && i + 1 < argc) {
-            template_path = argv[++i];
-        }
+    std::string input;
+    
+    // Prompt para título
+    std::cout << "Título da apresentação (pressione Enter para usar o padrão): ";
+    std::getline(std::cin, input);
+    if (!input.empty()) {
+        config["title"] = input;
     }
 
-    if (!json_config_file.empty()) {
-        try {
-            nlohmann::json config = read_json_file(json_config_file, debug);
-            
-            if (!validateJsonConfig(config, debug)) {
-                std::cerr << "Invalid JSON configuration file" << std::endl;
-                return 1;
-            }
-            
-            format = config.value("export_format", "spice");
-            output_filename = config.value("output_filename", "output.html");
-            labels = config.value("labels", std::vector<std::string>{});
-            std::string title = config.value("title", DEFAULT_TITLE);  // Usar título padrão
-            std::string main_text = config.value("main_text", "This is generated from a JSON config.");
+    std::cout << "Nome do arquivo de saída: ";
+    std::getline(std::cin, input);
+    config["output_filename"] = input;
 
-            help_text = config.value("help_text", "");
-            help_link = config.value("help_link", "");
-            help_badge_url = config.value("help_badge_url", "");
-            std::string author_image = config.value("author_image", "");
-            std::string template_file = config.value("template", "");
+    std::cout << "Caminhos das imagens (separados por vírgula): ";
+    std::getline(std::cin, input);
+    // Usar split do ConfigManager seria ideal, mas ele é privado ou helper.
+    // Vamos usar o split local que ainda existe no namespace utils
+    config["images"] = tsimg::utils::split(input, ',');
 
-            std::map<std::string, std::unique_ptr<ImageList>> imageLists;
-            for (int i = 0; ; ++i) {
-                std::string key = "images" + (i == 0 ? "" : "_" + std::to_string(i));
-                if (config.contains(key)) {
-                    std::string placeholder = "SPICE_IMAGES" + (i == 0 ? "" : "_" + std::to_string(i));
-                    auto imageList = std::make_unique<ImageList>();
-                    for (const auto& img : config[key]) {
-                        if (debug) std::cout << "Processing image: " << img << std::endl;
-                        imageList->addImage(std::make_unique<Image>(img, ""));
-                        if (debug) std::cout << "Image added successfully: " << img << std::endl;
-                    }
-                    imageLists[placeholder] = std::move(imageList);
-                } else {
-                    break;
-                }
-            }
+    std::cout << "Labels (opcional, separados por vírgula): ";
+    std::getline(std::cin, input);
+    config["labels"] = tsimg::utils::split(input, ',');
 
-            if (format == "gif") {
-                if (!createGif(output_filename, image_paths, debug)) {
-                    std::cerr << "Failed to create GIF file: " << output_filename << std::endl;
-                    return 1;
-                }
-            } else if (format == "spice") {
-                SPICEBuilder builder(title, debug);
-                builder.addTitle(title);  // Consistência no uso do título
-                builder.addContent("SPICE_TEXT", main_text);
-                if (createLabelsFromImages) {
-                    builder.generateLabelsFromImages();
-                }
-                builder.addLabels(labels);
-                if (!help_text.empty() && !help_link.empty() && !help_badge_url.empty()) {
-                    builder.setHelp(help_text, help_link, help_badge_url);
-                }
-                if (!author_image.empty()) {
-                    builder.setAuthorImage(author_image);
-                }
-                if (!template_file.empty()) {
-                    builder.setTemplate(template_file);
-                }
-                for (const auto& [tag, list] : imageLists) {
-                    for (const auto& img : list->getImages()) {
-                        builder.addImageToList(tag, img->getPath());
-                    }
-                }
-                TemplateWriter writer(builder.getTemplatePath(), debug);
-                writer.writeToFile(output_filename, builder.getContents(), builder.getImageLists(), builder.getLabels(), builder.getAuthorImageBase64());
-            } else {
-                std::cerr << "Unsupported format in JSON config: " << format << std::endl;
-                return 1;
-            }
-        } catch (const std::exception& e) {
-            std::cerr << "Error reading or processing JSON config file: " << e.what() << std::endl;
-            return 1;
-        }
-    } else {
-        if (output_filename.empty() || image_paths.empty()) {
-            display_info();
-            return 1;
-        }
+    std::cout << "Formato de exportação ('spice' ou 'gif', padrão: 'spice'): ";
+    std::getline(std::cin, input);
+    if (!input.empty()) {
+        config["export_format"] = input;
+    }
 
-        // Validar caminhos de imagem em modo CLI
-        for (const auto& img : image_paths) {
-            if (!tsimg::utils::ImageValidator::validateImagePath(img, debug)) {
-                std::cerr << "Invalid image file: " << img << std::endl;
-                return 1;
-            }
+    std::cout << "Ativar modo debug? (s/n): ";
+    std::getline(std::cin, input);
+    bool debug = (input == "s" || input == "S");
+    config["debug"] = debug;
+
+    // Configurações avançadas opcionais
+    std::cout << "Deseja configurar opções avançadas? (s/n): ";
+    std::getline(std::cin, input);
+    
+    if (input == "s" || input == "S") {
+        std::cout << "Caminho da imagem do autor (opcional): ";
+        std::getline(std::cin, input);
+        if (!input.empty()) {
+            config["author_image"] = input;
         }
         
-        // Validar caminhos de imagem extras
-        for (const auto& extraList : imagePathsExtras) {
-            for (const auto& img : extraList) {
-                if (!tsimg::utils::ImageValidator::validateImagePath(img, debug)) {
-                    std::cerr << "Invalid image file in extra list: " << img << std::endl;
-                    return 1;
-                }
-            }
+        std::cout << "Texto de ajuda (opcional): ";
+        std::getline(std::cin, input);
+        
+        if (!input.empty()) {
+            config["help_text"] = input;
+            
+            std::cout << "Link de ajuda (opcional): ";
+            std::getline(std::cin, input);
+            config["help_link"] = input;
+            
+            std::cout << "URL do ícone da ajuda (opcional): ";
+            std::getline(std::cin, input);
+            config["help_badge_url"] = input;
         }
-
-        if (format == "spice") {
-            SPICEBuilder builder(DEFAULT_TITLE, debug);  // Usar título padrão
-            builder.addTitle(DEFAULT_TITLE);
-            builder.addImagesAsync(image_paths);  // Usar a versão assíncrona
-            if (createLabelsFromImages) {
-                builder.generateLabelsFromImages();
-            }
-            builder.addLabels(labels);
-            if (!help_text.empty() && !help_link.empty() && !help_badge_url.empty()) {
-                builder.setHelp(help_text, help_link, help_badge_url);
-            }
-            if (!author_image_path.empty()) {
-                builder.setAuthorImage(author_image_path);
-            }
-            if (!template_path.empty()) {
-                builder.setTemplate(template_path);
-            }
-            for (size_t i = 0; i < imagePathsExtras.size(); ++i) {
-                std::string tag = "SPICE_IMAGES_" + std::to_string(i + 1);
-                for (const auto& img : imagePathsExtras[i]) {
-                    builder.addImageToList(tag, img);
-                }
-            }
-            TemplateWriter writer(builder.getTemplatePath(), debug);
-            writer.writeToFile(output_filename, builder.getContents(), builder.getImageLists(), builder.getLabels(), builder.getAuthorImageBase64());
-        } else if (format == "gif") {
-            if (!createGif(output_filename, image_paths, debug)) {
-                std::cerr << "Error while trying to create the gif file: " << output_filename << std::endl;
-                return 1;
-            }
-        } else {
-            std::cerr << "Unsupported format: " << format << std::endl;
-            return 1;
+        
+        std::cout << "Caminho do template personalizado (opcional): ";
+        std::getline(std::cin, input);
+        if (!input.empty()) {
+            config["template"] = input;
         }
     }
-    return 0;
+
+    // Processamento usando o novo pipeline
+    try {
+        tsimg::core::TSIMGPipeline pipeline(debug);
+        pipeline.configure(config);
+        return pipeline.execute();
+    } catch (const std::exception& e) {
+        tsimg::utils::errorLog(true, "Erro durante o processamento: " + std::string(e.what()));
+        return false;
+    }
+}
+
+// Função main refatorada
+int main(int argc, char* argv[]) {
+    // Configurar ambiente
+    tsimg::utils::Environment::setupEnvironment();
+    
+    // Verificar modo interativo
+    if (argc == 1) {
+        return runInteractiveMode() ? 0 : 1;
+    }
+    
+    try {
+        tsimg::utils::ConfigManager configManager;
+        if (!configManager.parseCLI(argc, argv)) {
+            return 1;
+        }
+        
+        if (configManager.isInfoRequested()) {
+            display_info(true);
+            return 0;
+        }
+        
+        bool debug = configManager.isDebug();
+        tsimg::core::TSIMGPipeline pipeline(debug);
+        
+        // Configurar pipeline com a configuração consolidada
+        pipeline.configure(configManager.getConfig());
+        
+        // Executar o pipeline
+        if (pipeline.execute()) {
+            return 0;
+        } else {
+            return 1;
+        }
+    } catch (const std::exception& e) {
+        tsimg::utils::errorLog(true, e.what());
+        display_info(false);
+        return 1;
+    }
 }

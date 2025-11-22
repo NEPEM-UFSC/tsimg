@@ -1,0 +1,36 @@
+Plan: Modernização e Otimização do Projeto TSIMG
+Este plano visa profissionalizar o projeto tsimg, melhorando o sistema de build (CMake), refatorando o código para reduzir acoplamento e preparando o software para distribuição robusta.
+
+Steps
+Modernizar CMake e Build System
+
+1: [DONE]
+Reescrever CMakeLists.txt usando alvos modernos (target_include_directories) e remover flags hardcoded (-static).
+Melhorar a integração do generate_build_info.py para evitar recompilações desnecessárias e corrigir caminhos relativos frágeis.
+Adicionar regras de install para binários, templates e bibliotecas.
+Refatoração da Arquitetura (Core)
+
+2:
+Extrair as classes SPICEGenerator e GIFGenerator de main.cpp para arquivos dedicados (ex: src/generators/).
+Remover variáveis globais (help_text, app_info) e injetá-las via injeção de dependência ou contexto de configuração.
+Padronizar o uso de namespaces e remover using namespace do escopo global.
+Implementar Distribuição (CPack)
+
+3:
+Configurar CPack no CMakeLists.txt para gerar instaladores (NSIS para Windows, DEB/RPM para Linux) e pacotes ZIP.
+Criar um target dist que agrupe o executável, a pasta templates e a documentação necessária.
+Melhorias na CLI e Configuração
+
+4:
+Refatorar o parser de argumentos em main.cpp para uma estrutura mais robusta ou adotar uma biblioteca leve (ex: CLI11 ou cxxopts).
+Centralizar a validação de configuração JSON e CLI em uma única classe ConfigManager.
+CI/CD e Qualidade
+
+5:
+Criar workflow do GitHub Actions para compilar e rodar testes (tsimg_test) em Windows/Linux.
+Adicionar análise estática (cppcheck ou clang-tidy) para identificar "code smells".
+Further Considerations
+Template Engine: O sistema atual de substituição de strings (replaceTag) é funcional mas frágil. Considerar migrar para uma lib de template leve (ex: inja) no futuro?
+Dependências: As libs de terceiros (stb, json, gif.h) estão "vendored" (copiadas). Manter assim para simplicidade ou migrar para um gerenciador como vcpkg? (Recomendação: Manter vend
+ored por enquanto para facilitar o build standalone).
+3. Testes: Os testes atuais usam mocks? Verificar se é possível rodar testes de integração reais gerando arquivos temporários no CI.s

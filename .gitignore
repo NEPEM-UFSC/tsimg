@@ -1,131 +1,103 @@
-# Ignorar arquivos e diretórios específicos do CMake
+# Build Directories
+build/
+build_*/
+bin/
+lib/
+out/
+dist/
+
+# CMake
 CMakeLists.txt.user
 CMakeCache.txt
-CMakeFiles
-CMakeScripts
-Testing
+CMakeFiles/
+CMakeScripts/
+Testing/
 Makefile
 cmake_install.cmake
 install_manifest.txt
 compile_commands.json
 CTestTestfile.cmake
-_deps
+_deps/
 CMakeUserPresets.json
-/build
-/.vscode
-/_example
-/dist
-.hintrc
+*.cmake
+!CMakeLists.txt
 
-compile.txt
-
-.cpp.in
-
-
-# Ignorar arquivos de configuração do Visual Studio Code
+# IDE / Editors
 .vscode/
-
-# Ignorar diretório de build
-build/
-
-# Ignorar arquivos de terceiros
-third_party/
-
-# Prerequisites
-*.d
+.idea/
+*.swp
+*.swo
+*.user
+tsimg.code-workspace
+.hintrc
 
 # Compiled Object files
 *.slo
 *.lo
 *.o
 *.obj
-
-# Precompiled Headers
 *.gch
 *.pch
 
-# Compiled Dynamic libraries
+# Compiled Libraries
 *.so
 *.dylib
 *.dll
-
-# Fortran module files
-*.mod
-*.smod
-
-# Compiled Static libraries
 *.lai
 *.la
 *.a
 *.lib
+*.exp
+*.ilk
+*.map
+*.pdb
+*.idb
 
 # Executables
 *.exe
 *.out
 *.app
 *.run
-
-# Prerequisites
-*.d
-
-# Object files
-*.o
-*.ko
-*.obj
-*.elf
-
-# Linker output
-*.ilk
-*.map
-*.exp
-
-# Precompiled Headers
-*.gch
-*.pch
-
-# Libraries
-*.lib
-*.a
-*.la
-*.lo
-
-# Shared objects (inc. Windows DLLs)
-*.dll
-*.so
-*.so.*
-*.dylib
-
-# Executables
-*.exe
-*.out
-*.app
-*.i*86
-*.x86_64
 *.hex
 
-# Debug files
-*.dSYM/
-*.su
-*.idb
-*.pdb
+# OS Generated
+.DS_Store
+Thumbs.db
 
-# Kernel Module Compile Results
-*.mod*
-*.cmd
-.tmp_versions/
-modules.order
-Module.symvers
-Mkfile.old
-dkms.conf
-.dump
+# Temporary / Generated Files
+compile.txt
+test_output.html
+*.tmp
+*.log
+.cpp.in
 
+# Python
+__pycache__/
+*.pyc
+
+# Project Specific
+/utils/build_info.txt
+# Note: version.rc is tracked, but updated by build script.
+# Note: VERSION is tracked.
+
+# Deprecated / Backup / Examples
+/depr/
+/bkp/
+/_example/
+
+# Documentation generated
 /doc/html
 /doc/latex
-/depr
-/bkp
-/utils/build_info.txt
+
+# Test artifacts
+/test/images
+
+# Scripts that are not part of the build system
 /utils/auto_list.py
 /utils/convert_to_gif.py
 /utils/convert_to_spice.py
-
-tsimg.code-workspace
+/third_party/
+/example/
+/include/
+/_CPack_Packages/
+*.zip
