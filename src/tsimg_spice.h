@@ -9,6 +9,7 @@
 #include <chrono>
 #include <functional>
 #include <optional>
+#include <nlohmann/json.hpp>
 
 // Declaração antecipada para Image
 class Image;
@@ -344,6 +345,9 @@ namespace tsimg::utils {
     std::string getFileExtension(const std::string& path);
     std::string sanitizeFileName(const std::string& filename);
     std::string getCurrentDateTime(const std::string& format = "%Y-%m-%d %H:%M:%S");
+    
+    // JSON utility
+    nlohmann::json read_json_file(const std::string& filename, bool debug);
 }
 
 // Factory para processadores de imagem

@@ -10,162 +10,16 @@
 #include "tsimg_spice.h" 
 #include "tsimg_gif.h"
 #include "build_info.h"
+#include "core/TSIMGPipeline.h"
 
 using tsimg::utils::debugLog;
 using tsimg::utils::errorLog;
 
-// Interface para geradores de formato
-class IFormatGenerator {
-public:
-    virtual ~IFormatGenerator() = default;
-    virtual bool generate(const std::string& outputFilename, 
-                          const std::vector<std::string>& imagePaths,
-                          const std::vector<std::string>& labels,
-                          const std::string& title,
-                          const nlohmann::json& config) = 0;
-};
 
-// Implementação do gerador SPICE
-class SPICEGenerator : public IFormatGenerator {
-private:
-    bool debug;
 
-public:
-    SPICEGenerator(bool debug) : debug(debug) {}
 
-    bool generate(const std::string& outputFilename, 
-                  const std::vector<std::string>& imagePaths,
-                  const std::vector<std::string>& labels,
-                  const std::string& title,
-                  const nlohmann::json& config) override {
-        try {
-            // Criar builder e configurar
-            SPICEBuilder builder(title, debug);
-            builder.addTitle(title);
-            builder.addImagesAsync(imagePaths);
-            
-            // Adicionar labels
-            if (config.contains("createLabelsFromImages") && config["createLabelsFromImages"].get<bool>()) {
-                builder.generateLabelsFromImages();
-            }
-            builder.addLabels(labels);
-            
-            // Configurar help se disponível
-            extern std::string help_text, help_link, help_badge_url; // Use extern for global vars
-            if (!help_text.empty() && !help_link.empty() && !help_badge_url.empty()) {
-                builder.setHelp(help_text, help_link, help_badge_url);
-            }
-            
-            // Configurar imagem do autor se disponível
-            if (config.contains("author_image")) {
-                builder.setAuthorImage(config["author_image"]);
-            }
-            
-            // Configurar template se disponível
-            if (config.contains("template")) {
-                builder.setTemplate(config["template"]);
-            }
-              // Adicionar conteúdo principal se disponível
-            if (config.contains("main_text")) {
-                builder.addContent("SPICE_TEXT", config["main_text"]);
-            }
-            
-            // Garantir que as imagens da lista principal são adicionadas a SPICE_IMAGES
-            if (config.contains("images") && config["images"].is_array()) {
-                for (const auto& img : config["images"]) {
-                    builder.addImageToList("SPICE_IMAGES", img);
-                }
-            }
-              
-            // Processar imagens extras em listas separadas
-            if (config.contains("extraImageLists") && config["extraImageLists"].is_array()) {
-                int index = 1;
-                for (const auto& imageList : config["extraImageLists"]) {
-                    if (imageList.is_array()) {
-                        std::string tag = "SPICE_IMAGES_" + std::to_string(index++);
-                        for (const auto& img : imageList) {
-                            builder.addImageToList(tag, img);
-                        }
-                    }
-                }
-            }
-            
-            // Processar também diretamente as listas images_1, images_2, etc.
-            for (int i = 1; ; i++) {
-                std::string key = "images_" + std::to_string(i);
-                if (!config.contains(key) || !config[key].is_array())
-                    break;
-                
-                std::string tag = "SPICE_IMAGES_" + std::to_string(i);
-                for (const auto& img : config[key]) {
-                    builder.addImageToList(tag, img);
-                }
-            }
-            
-            // Escrever arquivo final
-            TemplateWriter writer(builder.getTemplatePath(), debug);
-            writer.writeToFile(outputFilename, 
-                              builder.getContents(), 
-                              builder.getImageLists(), 
-                              builder.getLabels(), 
-                              builder.getAuthorImageBase64());
-            
-            tsimg::utils::debugLog(true, "SPICE file generated successfully: " + outputFilename);
-            return true;
-        } catch (const std::exception& e) {
-            tsimg::utils::errorLog(true, "Failed to create SPICE file: " + std::string(e.what()));
-            return false;
-        }
-    }
-};
 
-// Implementação do gerador GIF
-class GIFGenerator : public IFormatGenerator {
-private:
-    bool debug;
 
-public:
-    GIFGenerator(bool debug) : debug(debug) {}
-
-    bool generate(const std::string& outputFilename, 
-                  const std::vector<std::string>& imagePaths,
-                  const std::vector<std::string>& labels, // Unused in GIFGenerator
-                  const std::string& title, // Unused in GIFGenerator
-                  const nlohmann::json& config) override {
-        try {
-            // Configurar parâmetros do GIF
-            int delay = 100; // padrão
-            if (config.contains("gif_delay")) {
-                delay = config["gif_delay"].get<int>();
-            }
-            
-            bool loop = true; // padrão
-            if (config.contains("gif_loop")) {
-                loop = config["gif_loop"].get<bool>();
-            }
-            
-            int quality = 75; // padrão. Note: quality is not a standard param for the gif.h library used.
-                              // This parameter is not used in the createGif function call.
-            if (config.contains("gif_quality")) {
-                quality = config["gif_quality"].get<int>();
-            }
-            
-            // Chamar função de criação de GIF com parâmetros configuráveis
-            // The createGif function signature in tsimg_gif.h/cpp is:
-            // bool createGif(const std::string& output_filename, const std::vector<std::string>& image_paths, bool debug, int delay = 100, bool loop = true);
-            // It does not take a quality parameter. // This comment might be outdated given the linker error.
-            if (createGif(outputFilename, imagePaths, debug, delay, loop, quality)) {
-                tsimg::utils::debugLog(true, "GIF file generated successfully: " + outputFilename);
-                return true;
-            } else {
-                return false;
-            }
-        } catch (const std::exception& e) {
-            tsimg::utils::errorLog(true, "Error creating GIF: " + std::string(e.what()));
-            return false;
-        }
-    }
-};
 
 // Constantes globais
 const std::string DEFAULT_TITLE = "TSIMG Presentation";
@@ -217,33 +71,7 @@ namespace tsimg::utils {
         return buffer.str();
     }
 
-    // Função para ler um arquivo JSON com tratamento de erro aprimorado
-    nlohmann::json read_json_file(const std::string& filename, bool debug) {
-        if (debug) {
-            std::cout << "Reading JSON config file: " << filename << std::endl;
-        }
-        
-        if (!std::filesystem::exists(filename)) {
-            throw std::runtime_error("JSON file does not exist: " + filename);
-        }
-        
-        std::ifstream file(filename);
-        if (!file.is_open()) {
-            throw std::runtime_error("Could not open JSON file: " + filename);
-        }
 
-        try {
-            nlohmann::json json_data;
-            file >> json_data;
-
-            if (debug) {
-                std::cout << "JSON file read successfully: " << filename << std::endl;
-            }
-            return json_data;
-        } catch (const nlohmann::json::exception& e) {
-            throw std::runtime_error("Error parsing JSON file: " + std::string(e.what()));
-        }
-    }
 
     // Classe para gerenciar configurações globais e ambiente
     class Environment {
@@ -262,19 +90,7 @@ namespace tsimg::utils {
         }
     };
 
-    // Factory para criação de geradores de formato
-    class FormatGeneratorFactory {
-    public:
-        static std::unique_ptr<::IFormatGenerator> createGenerator(const std::string& format, bool debug) {
-            if (format == "spice") {
-                return std::make_unique<::SPICEGenerator>(debug);
-            } else if (format == "gif") {
-                return std::make_unique<::GIFGenerator>(debug);
-            } else {
-                throw std::runtime_error("Unsupported format: " + format);
-            }
-        }
-    };
+
 
     // Logger para centralizar logs
     class Logger {
@@ -317,169 +133,7 @@ std::string help_link;
 
 bool app_info = false;
 
-// Gerenciador de pipeline de processamento
-class TSIMGPipeline {
-private:
-    bool debug;
-    std::string format;
-    std::string outputFilename;
-    std::vector<std::string> imagePaths;
-    std::vector<std::string> labels;
-    std::string title;
-    nlohmann::json config;
 
-public:
-    TSIMGPipeline(bool debug) : debug(debug) {
-        title = DEFAULT_TITLE;
-        format = "spice"; // formato padrão
-    }
-
-    TSIMGPipeline& setFormat(const std::string& fmt) {
-        format = fmt;
-        return *this;
-    }
-
-    TSIMGPipeline& setOutputFilename(const std::string& filename) {
-        outputFilename = filename;
-        return *this;
-    }
-
-    TSIMGPipeline& setImagePaths(const std::vector<std::string>& paths) {
-        imagePaths = paths;
-        return *this;
-    }
-
-    TSIMGPipeline& setLabels(const std::vector<std::string>& lbls) {
-        labels = lbls;
-        return *this;
-    }
-
-    TSIMGPipeline& setTitle(const std::string& ttl) {
-        title = ttl.empty() ? DEFAULT_TITLE : ttl;
-        return *this;
-    }
-
-    TSIMGPipeline& setConfig(const nlohmann::json& cfg) {
-        config = cfg;
-        return *this;
-    }
-
-    TSIMGPipeline& loadFromJsonConfig(const std::string& jsonPath) {
-        try {
-            config = tsimg::utils::read_json_file(jsonPath, debug);
-            
-            // Aplicar configurações do JSON
-            if (config.contains("export_format")) {
-                format = config["export_format"];
-            }
-            
-            if (config.contains("output_filename")) {
-                outputFilename = config["output_filename"];
-            }
-            
-            if (config.contains("title")) {
-                title = config["title"];
-            }
-            
-            if (config.contains("labels") && config["labels"].is_array()) {
-                labels.clear();
-                for (const auto& label : config["labels"]) {
-                    labels.push_back(label);
-                }
-            }
-              if (config.contains("images") && config["images"].is_array()) {
-                imagePaths.clear();
-                for (const auto& img : config["images"]) {
-                    imagePaths.push_back(img);
-                }
-            }
-            
-            // Processar listas de imagens adicionais (images_1, images_2, etc.)
-            for (int i = 1; ; i++) {
-                std::string key = "images_" + std::to_string(i);
-                if (!config.contains(key) || !config[key].is_array())
-                    break;
-                
-                // Criar um vetor para esta lista de imagens
-                std::vector<std::string> extraImageList;
-                for (const auto& img : config[key]) {
-                    extraImageList.push_back(img);
-                }
-                
-                // Se não existir a lista extraImageLists no config, criá-la
-                if (!config.contains("extraImageLists")) {
-                    config["extraImageLists"] = nlohmann::json::array();
-                }
-                
-                // Adicionar esta lista ao config
-                config["extraImageLists"].push_back(extraImageList);
-            }
-            
-            // Configurações de ajuda
-            if (config.contains("help_text")) {
-                help_text = config["help_text"];
-            }
-            
-            if (config.contains("help_link")) {
-                help_link = config["help_link"];
-            }
-            
-            if (config.contains("help_badge_url")) {
-                help_badge_url = config["help_badge_url"];
-            }
-        } catch (const std::exception& e) {
-            tsimg::utils::errorLog(true, "Error loading JSON config: " + std::string(e.what()));
-            throw;
-        }
-        return *this;
-    }
-
-    bool validate() {
-        // Validar formato
-        if (format != "spice" && format != "gif") {
-            tsimg::utils::errorLog(true, "Unsupported format: " + format);
-            return false;
-        }
-        
-        // Validar nome do arquivo de saída
-        if (outputFilename.empty()) {
-            tsimg::utils::errorLog(true, "Output filename cannot be empty");
-            return false;
-        }
-        
-        // Validar caminhos de imagem
-        if (imagePaths.empty()) {
-            tsimg::utils::errorLog(true, "No image paths provided");
-            return false;
-        }
-        
-        for (const auto& img : imagePaths) {
-            if (!tsimg::utils::ImageValidator::validateImagePath(img, debug)) {
-                tsimg::utils::errorLog(true, "Invalid image file: " + img);
-                return false;
-            }
-        }
-        
-        return true;
-    }
-
-    bool execute() {
-        if (!validate()) {
-            return false;
-        }
-        
-        try {
-            // Criar gerador de formato apropriado
-            std::unique_ptr<IFormatGenerator> generator = tsimg::utils::FormatGeneratorFactory::createGenerator(format, debug); // Explicit type
-            
-            // Executar a geração
-            return generator->generate(outputFilename, imagePaths, labels, title, config);
-        } catch (const std::exception& e) {
-            tsimg::utils::errorLog(true, "Error in pipeline execution: " + std::string(e.what()));
-            return false;
-        }
-    }
-};
 
 // Função para exibir informações do aplicativo e ajuda
 void display_info() {
@@ -500,11 +154,8 @@ void display_info() {
         std::cout << "Supports export to SPICE and GIF formats." << std::endl;
         std::cout << "For more information, please visit: \nhttps://github.com/NEPEM-UFSC/tsimg" << std::endl;
         std::cout << "\n===================================================\n" << std::endl;
-        #ifdef BUILD_INFO
-            std::cout << BUILD_INFO << std::endl;
-        #else
-            std::cout << "Build information not available." << std::endl;
-        #endif
+        
+        std::cout << tsimg::getBuildInfo() << std::endl;
     }
     std::cerr << "Usage: create_file -n <output_filename> -i <image1.jpg,image2.png,...> [-l <label1,label2,...>] [-f <format>] [-debug] [-config <config.json>]" << std::endl;
     std::cerr << "Options:" << std::endl;
@@ -647,7 +298,7 @@ bool runInteractiveMode() {
 
     // Processamento usando o novo pipeline
     try {
-        TSIMGPipeline pipeline(debug);
+        tsimg::core::TSIMGPipeline pipeline(debug);
         pipeline.setFormat(format)
                 .setOutputFilename(output_filename)
                 .setImagePaths(image_paths)
@@ -727,7 +378,7 @@ int main(int argc, char* argv[]) {
     }
 
     // Criar pipeline e configurar
-    TSIMGPipeline pipeline(debug);
+    tsimg::core::TSIMGPipeline pipeline(debug);
     nlohmann::json config;
     
     // Adicionar configurações ao objeto JSON
