@@ -13,6 +13,24 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 # Build options
 option(TSIMG_STATIC_BUILD "Build with static linking" OFF)
 option(TSIMG_BUILD_TESTS "Build tests" ON)
+option(TSIMG_ENABLE_CPPCHECK "Enable static analysis with cppcheck" OFF)
+
+if(TSIMG_ENABLE_CPPCHECK)
+    find_program(CMAKE_CXX_CPPCHECK NAMES cppcheck)
+    if(CMAKE_CXX_CPPCHECK)
+        list(
+            APPEND CMAKE_CXX_CPPCHECK 
+            "--enable=warning,performance,portability,information"
+            "--suppress=missingIncludeSystem"
+            "--inconclusive"
+            "--inline-suppr"
+            "--std=c++17"
+        )
+        message(STATUS "Cppcheck enabled: ${CMAKE_CXX_CPPCHECK}")
+    else()
+        message(WARNING "Cppcheck requested but not found.")
+    endif()
+endif()
 
 # Output directories
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
@@ -100,11 +118,15 @@ target_link_libraries(tsimg PRIVATE tsimg_core)
 
 # Tests
 if(TSIMG_BUILD_TESTS)
+    enable_testing()
     add_executable(tsimg_test
         src/tsimg_test.cpp
         src/tsimg_test.h
+        src/tsimg_test_failures.cpp
+        src/tsimg_test_framework.h
     )
     target_link_libraries(tsimg_test PRIVATE tsimg_core)
+    add_test(NAME tsimg_test COMMAND tsimg_test)
 endif()
 
 # Installation
