@@ -59,10 +59,26 @@ target_include_directories(tsimg_build_info PUBLIC ${CMAKE_SOURCE_DIR}/src)
 set(SOURCES
     src/main.cpp
     src/tsimg_gif.cpp
-    src/tsimg_spice.cpp
     src/core/TSIMGPipeline.cpp
     src/generators/SPICEGenerator.cpp
     src/generators/GIFGenerator.cpp
+    
+    # Utils
+    src/utils/Logger.cpp
+    src/utils/FileHandler.cpp
+    src/utils/ImageValidator.cpp
+    src/utils/Base64.cpp
+    src/utils/FileIO.cpp
+    src/utils/JsonUtils.cpp
+    src/utils/ImageProcessor.cpp
+    
+    # Spice Core
+    src/spice/Image.cpp
+    src/spice/SpiceContent.cpp
+    src/spice/HTMLBuilder.cpp
+    src/spice/TemplateWriter.cpp
+    src/spice/SPICEBuilder.cpp
+    src/spice/SPICE.cpp
 )
 
 if(EXISTS ${CMAKE_SOURCE_DIR}/version.rc)
@@ -101,8 +117,7 @@ set(CPACK_PACKAGE_VENDOR "NEPEM-UFSC")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Temporal Series Interactive Imager")
 set(CPACK_PACKAGE_VERSION "${PROJECT_VERSION}")
 set(CPACK_PACKAGE_INSTALL_DIRECTORY "tsimg")
-set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_SOURCE_DIR}/README.md") # Placeholder for license
-
+set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_SOURCE_DIR}/README.md")
 if(WIN32)
     set(CPACK_GENERATOR "ZIP;NSIS")
 else()
