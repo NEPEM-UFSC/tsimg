@@ -1,0 +1,22 @@
+name: Static Analysis
+
+on:
+  push:
+    branches: [ main, dev ]
+  pull_request:
+    branches: [ main, dev ]
+
+jobs:
+  cppcheck:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Install Cppcheck
+      run: sudo apt-get update && sudo apt-get install -y cppcheck
+
+    - name: Configure CMake
+      run: cmake -B build -DTSIMG_ENABLE_CPPCHECK=ON
+
+    - name: Run Analysis
+      run: cmake --build build
