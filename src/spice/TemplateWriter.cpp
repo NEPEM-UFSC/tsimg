@@ -309,8 +309,6 @@ std::string TemplateWriter::getCurrentDateTime() const {
     return ss.str();
 }
 
-const std::string TemplateWriter::VERSION = "1.0.0";
-
 std::string TemplateWriter::formatBuildInfo(const std::string& buildInfo) const {
     std::vector<std::string> lines;
     std::istringstream stream(buildInfo);
@@ -334,7 +332,7 @@ std::string TemplateWriter::generateBuildInfo() const {
          << "    TSIMG Build Information\n"
          << "    ----------------------\n"
          << "    Generated on: " << getCurrentDateTime() << "\n"
-         << "    TSIMG Version: " << VERSION << "\n"
+         << "    TSIMG Version: " << tsimg::getVersion() << "\n"
          << "    Generator Information:\n";
     
     info << formatBuildInfo(tsimg::getBuildInfo());

@@ -26,7 +26,6 @@ public:
     std::string buildHtmlStructure(const SPICEBuilder& builder);
 
 private:
-    static const std::string VERSION;
     std::string generateBuildInfo() const;
     std::string getCurrentDateTime() const;
     std::string formatBuildInfo(const std::string& buildInfo) const;

@@ -24,7 +24,6 @@ using tsimg::utils::errorLog;
 // Constantes globais
 const std::string DEFAULT_TITLE = "TSIMG Presentation";
 const std::string APP_NAME = "Temporal Series Interactive Imager";
-const std::string VERSION = "1.1.0";
 
 // Definição de namespace tsimg para funções utilitárias
 namespace tsimg::utils {
@@ -148,7 +147,7 @@ void display_info() {
         std::cout << "   | $$   |  $$$$$$/ /$$$$$$| $$ \\/  | $$|  $$$$$$/" << std::endl;
         std::cout << "   |__/    \\______/ |______/|__/     |__/ \\______/ " << std::endl;
         std::cout << "\n===================================================" << std::endl;
-        std::cout << " \nTemporal Series Interactive Imager (TSIMG) v" << VERSION << "\n" << std::endl;
+        std::cout << " \nTemporal Series Interactive Imager (TSIMG) v" << tsimg::getVersion() << "\n" << std::endl;
         std::cout << "===================================================" << std::endl;
         std::cout << "\n A tool for creating interactive images of time series." << std::endl;
         std::cout << "Supports export to SPICE and GIF formats." << std::endl;

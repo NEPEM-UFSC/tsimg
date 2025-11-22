@@ -1,7 +1,9 @@
 cmake_minimum_required(VERSION 3.15)
 
 # Project name and version
-project(tsimg VERSION 0.1 LANGUAGES CXX)
+file(READ "VERSION" VER_RAW)
+string(STRIP "${VER_RAW}" PROJECT_VERSION_STRING)
+project(tsimg VERSION ${PROJECT_VERSION_STRING} LANGUAGES CXX)
 
 find_package(Python COMPONENTS Interpreter REQUIRED)
 
@@ -41,12 +43,12 @@ add_custom_command(
     COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/generated
     COMMAND ${Python_EXECUTABLE} ${BUILD_INFO_SCRIPT}
             --output ${BUILD_INFO_CPP}
-            --cmake ${CMAKE_SOURCE_DIR}/CMakeLists.txt
+            --project-version ${PROJECT_VERSION}
             --version-rc ${CMAKE_SOURCE_DIR}/version.rc
             --build-info-txt ${BUILD_INFO_TXT}
     DEPENDS 
         ${BUILD_INFO_SCRIPT}
-        ${CMAKE_SOURCE_DIR}/CMakeLists.txt
+        ${CMAKE_SOURCE_DIR}/VERSION
     COMMENT "Generating build info"
     VERBATIM
 )

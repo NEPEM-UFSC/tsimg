@@ -13,12 +13,13 @@ def read_version_from_cmake(cmake_path):
             match = re.search(r'project\(tsimg\s+VERSION\s+([\d.]+)\)', content)
             if match:
                 return match.group(1)
-    return "0.1"  # fallback version
+    return "0.2"  # fallback version
 
 def main():
     parser = argparse.ArgumentParser(description='Generate build info for tsimg')
     parser.add_argument('--output', required=True, help='Output path for build_info.cpp')
-    parser.add_argument('--cmake', required=True, help='Path to CMakeLists.txt')
+    parser.add_argument('--cmake', help='Path to CMakeLists.txt (deprecated if --project-version is used)')
+    parser.add_argument('--project-version', help='Project version string (e.g. 0.2)')
     parser.add_argument('--version-rc', help='Path to version.rc to update')
     parser.add_argument('--build-info-txt', help='Path to store persistent build number')
     
@@ -29,11 +30,18 @@ def main():
 
     # Setup paths
     output_file = os.path.abspath(args.output)
-    cmake_file = os.path.abspath(args.cmake)
     
     # Version logic
-    version = read_version_from_cmake(cmake_file)
-    print(f"Version from CMakeLists.txt: {version}")
+    if args.project_version:
+        version = args.project_version
+        print(f"Version from arguments: {version}")
+    elif args.cmake:
+        cmake_file = os.path.abspath(args.cmake)
+        version = read_version_from_cmake(cmake_file)
+        print(f"Version from CMakeLists.txt: {version}")
+    else:
+        version = "0.2" # fallback
+        print(f"Using fallback version: {version}")
 
     # Build number logic
     patch = 0
