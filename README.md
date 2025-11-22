@@ -36,3 +36,84 @@ O formato `.spice` é otimizado para compatibilidade ampla em dispositivos móve
 Imagine que você precisa exibir uma série de imagens que mostram a evolução de um fenômeno ao longo do tempo, como o desenvolvimento urbano de uma cidade ou a variação de índices vegetativos de uma plantação. Ao invés de utilizar múltiplos arquivos de imagem que dificultam a manipulação e análise, você pode utilizar o script TSIMG para gerar um arquivo `.spice`. Esse arquivo organiza todas as imagens e descrições em um documento HTML interativo, permitindo que o usuário navegue pelas camadas temporais usando um controle deslizante.
 
 O arquivo `.spice` permite uma análise intuitiva e fluida das imagens seriadas, com transições suaves e descrições associadas a cada camada temporal. O resultado é um documento interativo que agrega valor ao seu trabalho e melhora a comunicação visual dos dados.
+
+## Compilação e Instalação
+
+### Pré-requisitos
+
+- CMake 3.15 ou superior
+- Compilador C++ compatível com C++17 (GCC, Clang, MSVC)
+
+### Instruções de Build
+
+```bash
+mkdir build
+cd build
+cmake ..
+cmake --build . --config Release
+```
+
+Para gerar o pacote de instalação (se configurado):
+
+```bash
+cpack
+```
+
+## Uso
+
+O TSIMG pode ser utilizado via linha de comando (CLI) ou através de um arquivo de configuração JSON.
+
+### Linha de Comando
+
+```bash
+tsimg -n <output_filename> -i <image1.jpg,image2.png,...> [opções]
+```
+
+**Opções Disponíveis:**
+
+- `-n <filename>`: Nome do arquivo de saída (ex: `resultado.html`).
+- `-i <paths>`: Lista de imagens separadas por vírgula.
+- `-l <labels>`: Lista de rótulos para as imagens (opcional).
+- `-f <format>`: Formato de exportação: `spice` (padrão) ou `gif`.
+- `-config <file.json>`: Carrega opções de um arquivo JSON.
+- `-debug`: Ativa modo de debug com logs detalhados.
+- `-labelbyname`: Gera rótulos automaticamente baseados nos nomes dos arquivos.
+- `-title <text>`: Define o título da apresentação.
+- `-authorimage <path>`: Caminho para imagem do autor.
+- `-template <path>`: Caminho para um template HTML customizado.
+
+### Arquivo de Configuração (JSON)
+
+Você pode salvar suas configurações em um arquivo JSON para reutilização.
+
+**Exemplo (`config.json`):**
+
+```json
+{
+  "output_filename": "meu_projeto.html",
+  "images": [
+    "img/jan.jpg",
+    "img/fev.jpg",
+    "img/mar.jpg"
+  ],
+  "labels": [
+    "Janeiro",
+    "Fevereiro",
+    "Março"
+  ],
+  "export_format": "spice",
+  "title": "Evolução Temporal 2024",
+  "createLabelsFromImages": false,
+  "debug": false
+}
+```
+
+Para usar:
+
+```bash
+tsimg -config config.json
+```
+
+## Documentação Técnica
+
+A documentação do código pode ser gerada via Doxygen. Consulte a pasta `doc/` para mais detalhes.
