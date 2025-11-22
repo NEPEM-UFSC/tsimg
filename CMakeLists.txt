@@ -14,29 +14,15 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 option(TSIMG_STATIC_BUILD "Build with static linking" OFF)
 option(TSIMG_BUILD_TESTS "Build tests" ON)
 
-# Compiler flags
-if(MSVC)
-    add_compile_options(/W3 /O2)
-else()
-    add_compile_options(-Wall -Wextra -O3 -funroll-loops)
-    if(TSIMG_STATIC_BUILD)
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -static-libgcc -static-libstdc++")
-        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static")
-    endif()
-endif()
-
 # Output directories
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 
-# Include directories
-include_directories(include third_party)
-
 # Build Info Generation
 set(BUILD_INFO_CPP ${CMAKE_BINARY_DIR}/generated/build_info.cpp)
 set(BUILD_INFO_SCRIPT ${CMAKE_SOURCE_DIR}/utils/generate_build_info.py)
-set(BUILD_INFO_TXT ${CMAKE_BINARY_DIR}/build_info.txt)
+set(BUILD_INFO_TXT ${CMAKE_SOURCE_DIR}/utils/build_info.txt)
 
 add_custom_command(
     OUTPUT ${BUILD_INFO_CPP}
@@ -53,13 +39,12 @@ add_custom_command(
     VERBATIM
 )
 
-# Create a library for build info to avoid recompiling everything
+# Create a library for build info
 add_library(tsimg_build_info STATIC ${BUILD_INFO_CPP})
 target_include_directories(tsimg_build_info PUBLIC ${CMAKE_SOURCE_DIR}/src)
 
-# Main sources
-set(SOURCES
-    src/main.cpp
+# Core Library Sources
+set(CORE_SOURCES
     src/tsimg_gif.cpp
     src/core/TSIMGPipeline.cpp
     src/generators/SPICEGenerator.cpp
@@ -83,14 +68,34 @@ set(SOURCES
     src/spice/SPICE.cpp
 )
 
-if(EXISTS ${CMAKE_SOURCE_DIR}/version.rc)
-    list(APPEND SOURCES version.rc)
+# Core Library
+add_library(tsimg_core STATIC ${CORE_SOURCES})
+target_include_directories(tsimg_core PUBLIC 
+    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
+    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/third_party>
+    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src>
+    $<INSTALL_INTERFACE:include>
+)
+target_link_libraries(tsimg_core PUBLIC tsimg_build_info)
+
+# Compiler Options for Core
+if(MSVC)
+    target_compile_options(tsimg_core PRIVATE /W3 /O2)
+else()
+    target_compile_options(tsimg_core PRIVATE -Wall -Wextra -O3 -funroll-loops)
+    if(TSIMG_STATIC_BUILD)
+        target_link_options(tsimg_core PUBLIC -static-libgcc -static-libstdc++ -static)
+    endif()
 endif()
 
-# Executable
-add_executable(tsimg ${SOURCES})
-target_link_libraries(tsimg PRIVATE tsimg_build_info)
-target_include_directories(tsimg PRIVATE ${CMAKE_SOURCE_DIR}/src)
+# Main Executable
+set(MAIN_SOURCES src/main.cpp)
+if(EXISTS ${CMAKE_SOURCE_DIR}/version.rc)
+    list(APPEND MAIN_SOURCES version.rc)
+endif()
+
+add_executable(tsimg ${MAIN_SOURCES})
+target_link_libraries(tsimg PRIVATE tsimg_core)
 
 # Tests
 if(TSIMG_BUILD_TESTS)
@@ -98,15 +103,16 @@ if(TSIMG_BUILD_TESTS)
         src/tsimg_test.cpp
         src/tsimg_test.h
     )
-    target_link_libraries(tsimg_test PRIVATE tsimg_build_info)
-    target_include_directories(tsimg_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
+    target_link_libraries(tsimg_test PRIVATE tsimg_core)
 endif()
 
 # Installation
 include(GNUInstallDirs)
 
-install(TARGETS tsimg
+install(TARGETS tsimg tsimg_core
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )
 
 if(EXISTS ${CMAKE_SOURCE_DIR}/templates)
