@@ -26,6 +26,7 @@ namespace tsimg::core {
         TSIMGPipeline& setLabels(const std::vector<std::string>& lbls);
         TSIMGPipeline& setTitle(const std::string& ttl);
         TSIMGPipeline& setConfig(const nlohmann::json& cfg);
+        TSIMGPipeline& configure(const nlohmann::json& cfg);
         TSIMGPipeline& loadFromJsonConfig(const std::string& jsonPath);
 
         bool validate();

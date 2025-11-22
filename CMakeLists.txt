@@ -58,6 +58,7 @@ set(CORE_SOURCES
     src/utils/FileIO.cpp
     src/utils/JsonUtils.cpp
     src/utils/ImageProcessor.cpp
+    src/utils/ConfigManager.cpp
     
     # Spice Core
     src/spice/Image.cpp

@@ -11,6 +11,7 @@
 #include "tsimg_gif.h"
 #include "build_info.h"
 #include "core/TSIMGPipeline.h"
+#include "utils/ConfigManager.h"
 
 // Constantes globais
 const std::string DEFAULT_TITLE = "TSIMG Presentation";
@@ -211,97 +212,80 @@ bool runInteractiveMode() {
 
     tsimg::utils::debugLog(true, "Por favor, insira os parâmetros necessários.");
 
-    std::string output_filename;
-    std::string images_input;
-    std::string labels_input;
-    std::string format = "spice";
-    bool debug = false;
-    std::string title;
-    
-    // Variáveis locais para configuração
-    std::string help_text;
-    std::string help_link;
-    std::string help_badge_url;
+    tsimg::utils::ConfigManager configManager;
+    nlohmann::json config;
 
+    std::string input;
+    
     // Prompt para título
     std::cout << "Título da apresentação (pressione Enter para usar o padrão): ";
-    std::getline(std::cin, title);
-    if (title.empty()) {
-        title = DEFAULT_TITLE;
+    std::getline(std::cin, input);
+    if (!input.empty()) {
+        config["title"] = input;
     }
 
     std::cout << "Nome do arquivo de saída: ";
-    std::getline(std::cin, output_filename);
+    std::getline(std::cin, input);
+    config["output_filename"] = input;
 
     std::cout << "Caminhos das imagens (separados por vírgula): ";
-    std::getline(std::cin, images_input);
-    std::vector<std::string> image_paths = tsimg::utils::split(images_input, ',');
+    std::getline(std::cin, input);
+    // Usar split do ConfigManager seria ideal, mas ele é privado ou helper.
+    // Vamos usar o split local que ainda existe no namespace utils
+    config["images"] = tsimg::utils::split(input, ',');
 
     std::cout << "Labels (opcional, separados por vírgula): ";
-    std::getline(std::cin, labels_input);
-    std::vector<std::string> labels = tsimg::utils::split(labels_input, ',');
+    std::getline(std::cin, input);
+    config["labels"] = tsimg::utils::split(input, ',');
 
     std::cout << "Formato de exportação ('spice' ou 'gif', padrão: 'spice'): ";
-    std::string format_input;
-    std::getline(std::cin, format_input);
-    if (!format_input.empty()) {
-        format = format_input;
+    std::getline(std::cin, input);
+    if (!input.empty()) {
+        config["export_format"] = input;
     }
 
     std::cout << "Ativar modo debug? (s/n): ";
-    std::string debug_input;
-    std::getline(std::cin, debug_input);
-    if (debug_input == "s" || debug_input == "S") {
-        debug = true;
-    }
+    std::getline(std::cin, input);
+    bool debug = (input == "s" || input == "S");
+    config["debug"] = debug;
 
     // Configurações avançadas opcionais
     std::cout << "Deseja configurar opções avançadas? (s/n): ";
-    std::string advanced_input;
-    std::getline(std::cin, advanced_input);
+    std::getline(std::cin, input);
     
-    nlohmann::json config;
-    if (advanced_input == "s" || advanced_input == "S") {
+    if (input == "s" || input == "S") {
         std::cout << "Caminho da imagem do autor (opcional): ";
-        std::string author_image;
-        std::getline(std::cin, author_image);
-        if (!author_image.empty()) {
-            config["author_image"] = author_image;
+        std::getline(std::cin, input);
+        if (!input.empty()) {
+            config["author_image"] = input;
         }
         
         std::cout << "Texto de ajuda (opcional): ";
-        std::getline(std::cin, help_text);
+        std::getline(std::cin, input);
         
-        if (!help_text.empty()) {
+        if (!input.empty()) {
+            config["help_text"] = input;
+            
             std::cout << "Link de ajuda (opcional): ";
-            std::getline(std::cin, help_link);
+            std::getline(std::cin, input);
+            config["help_link"] = input;
             
             std::cout << "URL do ícone da ajuda (opcional): ";
-            std::getline(std::cin, help_badge_url);
-            
-            config["help_text"] = help_text;
-            config["help_link"] = help_link;
-            config["help_badge_url"] = help_badge_url;
+            std::getline(std::cin, input);
+            config["help_badge_url"] = input;
         }
         
         std::cout << "Caminho do template personalizado (opcional): ";
-        std::string template_path;
-        std::getline(std::cin, template_path);
-        if (!template_path.empty()) {
-            config["template"] = template_path;
+        std::getline(std::cin, input);
+        if (!input.empty()) {
+            config["template"] = input;
         }
     }
 
     // Processamento usando o novo pipeline
     try {
         tsimg::core::TSIMGPipeline pipeline(debug);
-        pipeline.setFormat(format)
-                .setOutputFilename(output_filename)
-                .setImagePaths(image_paths)
-                .setLabels(labels)
-                .setTitle(title)
-                .setConfig(config);
-        
+        pipeline.configure(config);
         return pipeline.execute();
     } catch (const std::exception& e) {
         tsimg::utils::errorLog(true, "Erro durante o processamento: " + std::string(e.what()));
@@ -319,102 +303,22 @@ int main(int argc, char* argv[]) {
         return runInteractiveMode() ? 0 : 1;
     }
     
-    // Processamento de argumentos de linha de comando
-    std::string output_filename;
-    std::vector<std::string> image_paths;
-    std::vector<std::string> labels;
-    bool debug = false;
-    bool createLabelsFromImages = false;
-    std::string format = "spice";
-    std::string json_config_file;
-    std::string author_image_path;
-    std::string template_path;
-    std::string title = DEFAULT_TITLE;
-    
-    // Variáveis locais para ajuda
-    std::string help_text;
-    std::string help_link;
-    std::string help_badge_url;
-
-    std::vector<std::vector<std::string>> imagePathsExtras;
-
-    // Processar argumentos de linha de comando
-    for (int i = 1; i < argc; ++i) {
-        if (std::strcmp(argv[i], "-info") == 0) {
+    try {
+        tsimg::utils::ConfigManager configManager;
+        if (!configManager.parseCLI(argc, argv)) {
+            return 1;
+        }
+        
+        if (configManager.isInfoRequested()) {
             display_info(true);
             return 0;
-        } else if (std::strcmp(argv[i], "-n") == 0 && i + 1 < argc) {
-            output_filename = argv[++i];
-        } else if (std::strcmp(argv[i], "-i") == 0 && i + 1 < argc) {
-            image_paths = tsimg::utils::split(argv[++i], ',');
-        } else if (std::strcmp(argv[i], "-l") == 0 && i + 1 < argc) {
-            labels = tsimg::utils::split(argv[++i], ',');
-        } else if (std::strcmp(argv[i], "-debug") == 0) {
-            debug = true;
-        } else if (std::strcmp(argv[i], "-f") == 0 && i + 1 < argc) {
-            format = argv[++i];
-        } else if (std::strcmp(argv[i], "-config") == 0 && i + 1 < argc) {
-            json_config_file = argv[++i];
-        } else if (std::strcmp(argv[i], "-labelbyname") == 0) {
-            createLabelsFromImages = true;
-        } else if (std::strcmp(argv[i], "-authorimage") == 0 && i + 1 < argc) {
-            author_image_path = argv[++i];
-        } else if (std::strcmp(argv[i], "-help_text") == 0 && i + 1 < argc) {
-            help_text = argv[++i];
-        } else if (std::strcmp(argv[i], "-help_link") == 0 && i + 1 < argc) {
-            help_link = argv[++i];
-        } else if (std::strcmp(argv[i], "-help_badge_url") == 0 && i + 1 < argc) {
-            help_badge_url = argv[++i];
-        } else if (std::strcmp(argv[i], "-title") == 0 && i + 1 < argc) {
-            title = argv[++i];
-        } else if (std::strncmp(argv[i], "-2", 2) == 0 && i + 1 < argc) {
-            imagePathsExtras.push_back(tsimg::utils::split(argv[++i], ','));
-        } else if (std::strncmp(argv[i], "-3", 2) == 0 && i + 1 < argc) {
-            imagePathsExtras.push_back(tsimg::utils::split(argv[++i], ','));
-        } else if (std::strcmp(argv[i], "-template") == 0 && i + 1 < argc) {
-            template_path = argv[++i];
         }
-    }
-
-    // Criar pipeline e configurar
-    tsimg::core::TSIMGPipeline pipeline(debug);
-    nlohmann::json config;
-    
-    // Adicionar configurações ao objeto JSON
-    if (!author_image_path.empty()) {
-        config["author_image"] = author_image_path;
-    }
-    
-    if (!template_path.empty()) {
-        config["template"] = template_path;
-    }
-    
-    if (!help_text.empty()) {
-        config["help_text"] = help_text;
-        config["help_link"] = help_link;
-        config["help_badge_url"] = help_badge_url;
-    }
-    
-    config["createLabelsFromImages"] = createLabelsFromImages;
-    
-    // Adicionar listas extras de imagens
-    if (!imagePathsExtras.empty()) {
-        config["extraImageLists"] = imagePathsExtras;
-    }
-
-    try {
-        // Se tiver arquivo de configuração JSON, usar ele
-        if (!json_config_file.empty()) {
-            pipeline.loadFromJsonConfig(json_config_file);
-        } else {
-            // Configurar pipeline com argumentos de linha de comando
-            pipeline.setFormat(format)
-                    .setOutputFilename(output_filename)
-                    .setImagePaths(image_paths)
-                    .setLabels(labels)
-                    .setTitle(title)
-                    .setConfig(config);
-        }
+        
+        bool debug = configManager.isDebug();
+        tsimg::core::TSIMGPipeline pipeline(debug);
+        
+        // Configurar pipeline com a configuração consolidada
+        pipeline.configure(configManager.getConfig());
         
         // Executar o pipeline
         if (pipeline.execute()) {

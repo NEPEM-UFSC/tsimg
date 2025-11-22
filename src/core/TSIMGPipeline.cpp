@@ -42,62 +42,66 @@ namespace tsimg::core {
         return *this;
     }
 
+    TSIMGPipeline& TSIMGPipeline::configure(const nlohmann::json& cfg) {
+        config = cfg;
+        
+        // Aplicar configurações do JSON
+        if (config.contains("export_format")) {
+            format = config["export_format"];
+        }
+        
+        if (config.contains("output_filename")) {
+            outputFilename = config["output_filename"];
+        }
+        
+        if (config.contains("title")) {
+            title = config["title"];
+        }
+        
+        if (config.contains("labels") && config["labels"].is_array()) {
+            labels.clear();
+            for (const auto& label : config["labels"]) {
+                labels.push_back(label);
+            }
+        }
+        if (config.contains("images") && config["images"].is_array()) {
+            imagePaths.clear();
+            for (const auto& img : config["images"]) {
+                imagePaths.push_back(img);
+            }
+        }
+        
+        // Processar listas de imagens adicionais (images_1, images_2, etc.)
+        for (int i = 1; ; i++) {
+            std::string key = "images_" + std::to_string(i);
+            if (!config.contains(key) || !config[key].is_array())
+                break;
+            
+            // Criar um vetor para esta lista de imagens
+            std::vector<std::string> extraImageList;
+            for (const auto& img : config[key]) {
+                extraImageList.push_back(img);
+            }
+            
+            // Se não existir a lista extraImageLists no config, criá-la
+            if (!config.contains("extraImageLists")) {
+                config["extraImageLists"] = nlohmann::json::array();
+            }
+            
+            // Adicionar esta lista ao config
+            config["extraImageLists"].push_back(extraImageList);
+        }
+        return *this;
+    }
+
     TSIMGPipeline& TSIMGPipeline::loadFromJsonConfig(const std::string& jsonPath) {
         try {
-            config = tsimg::utils::read_json_file(jsonPath, debug);
-            
-            // Aplicar configurações do JSON
-            if (config.contains("export_format")) {
-                format = config["export_format"];
-            }
-            
-            if (config.contains("output_filename")) {
-                outputFilename = config["output_filename"];
-            }
-            
-            if (config.contains("title")) {
-                title = config["title"];
-            }
-            
-            if (config.contains("labels") && config["labels"].is_array()) {
-                labels.clear();
-                for (const auto& label : config["labels"]) {
-                    labels.push_back(label);
-                }
-            }
-              if (config.contains("images") && config["images"].is_array()) {
-                imagePaths.clear();
-                for (const auto& img : config["images"]) {
-                    imagePaths.push_back(img);
-                }
-            }
-            
-            // Processar listas de imagens adicionais (images_1, images_2, etc.)
-            for (int i = 1; ; i++) {
-                std::string key = "images_" + std::to_string(i);
-                if (!config.contains(key) || !config[key].is_array())
-                    break;
-                
-                // Criar um vetor para esta lista de imagens
-                std::vector<std::string> extraImageList;
-                for (const auto& img : config[key]) {
-                    extraImageList.push_back(img);
-                }
-                
-                // Se não existir a lista extraImageLists no config, criá-la
-                if (!config.contains("extraImageLists")) {
-                    config["extraImageLists"] = nlohmann::json::array();
-                }
-                
-                // Adicionar esta lista ao config
-                config["extraImageLists"].push_back(extraImageList);
-            }
-            
+            nlohmann::json loadedConfig = tsimg::utils::read_json_file(jsonPath, debug);
+            return configure(loadedConfig);
         } catch (const std::exception& e) {
             tsimg::utils::errorLog(true, "Error loading JSON config: " + std::string(e.what()));
             throw;
         }
-        return *this;
     }
 
     bool TSIMGPipeline::validate() {
