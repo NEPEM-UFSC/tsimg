@@ -1,0 +1,12 @@
+PROJECT_NAME           = "TSIMG"
+PROJECT_NUMBER         = 0.2.0
+OUTPUT_DIRECTORY       = doc
+INPUT                  = src include
+RECURSIVE              = YES
+FILE_PATTERNS          = *.cpp *.h
+GENERATE_HTML          = YES
+GENERATE_LATEX         = NO
+OPTIMIZE_OUTPUT_FOR_C  = NO
+EXTRACT_ALL            = YES
+EXTRACT_PRIVATE        = YES
+EXTRACT_STATIC         = YES
