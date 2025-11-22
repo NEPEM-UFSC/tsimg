@@ -99,3 +99,5 @@ __pycache__/
 /third_party/
 /example/
 /include/
+/_CPack_Packages/
+*.zip

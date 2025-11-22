@@ -12,15 +12,6 @@
 #include "build_info.h"
 #include "core/TSIMGPipeline.h"
 
-using tsimg::utils::debugLog;
-using tsimg::utils::errorLog;
-
-
-
-
-
-
-
 // Constantes globais
 const std::string DEFAULT_TITLE = "TSIMG Presentation";
 const std::string APP_NAME = "Temporal Series Interactive Imager";
@@ -126,16 +117,14 @@ namespace tsimg::utils {
 } // namespace tsimg::utils
 
 // Variáveis globais para ajuda
-std::string help_text;
-std::string help_badge_url;
-std::string help_link;
-
-bool app_info = false;
-
-
+// Removidas para evitar estado global
+// std::string help_text;
+// std::string help_badge_url;
+// std::string help_link;
+// bool app_info = false;
 
 // Função para exibir informações do aplicativo e ajuda
-void display_info() {
+void display_info(bool app_info) {
     if (app_info) {
         std::cout << "===================================================\n" << std::endl;
         std::cout << " /$$$$$$$$  /$$$$$$  /$$$$$$ /$$      /$$  /$$$$$$ " << std::endl;
@@ -218,8 +207,7 @@ bool validateJsonConfig(const nlohmann::json& config, bool debug) {
 
 // Função para modo interativo aprimorado
 bool runInteractiveMode() {
-    app_info = true;
-    display_info();
+    display_info(true);
 
     tsimg::utils::debugLog(true, "Por favor, insira os parâmetros necessários.");
 
@@ -229,6 +217,11 @@ bool runInteractiveMode() {
     std::string format = "spice";
     bool debug = false;
     std::string title;
+    
+    // Variáveis locais para configuração
+    std::string help_text;
+    std::string help_link;
+    std::string help_badge_url;
 
     // Prompt para título
     std::cout << "Título da apresentação (pressione Enter para usar o padrão): ";
@@ -285,6 +278,10 @@ bool runInteractiveMode() {
             
             std::cout << "URL do ícone da ajuda (opcional): ";
             std::getline(std::cin, help_badge_url);
+            
+            config["help_text"] = help_text;
+            config["help_link"] = help_link;
+            config["help_badge_url"] = help_badge_url;
         }
         
         std::cout << "Caminho do template personalizado (opcional): ";
@@ -333,15 +330,18 @@ int main(int argc, char* argv[]) {
     std::string author_image_path;
     std::string template_path;
     std::string title = DEFAULT_TITLE;
+    
+    // Variáveis locais para ajuda
+    std::string help_text;
+    std::string help_link;
+    std::string help_badge_url;
 
     std::vector<std::vector<std::string>> imagePathsExtras;
 
     // Processar argumentos de linha de comando
     for (int i = 1; i < argc; ++i) {
         if (std::strcmp(argv[i], "-info") == 0) {
-            app_info = true;
-            display_info();
-            app_info = false;
+            display_info(true);
             return 0;
         } else if (std::strcmp(argv[i], "-n") == 0 && i + 1 < argc) {
             output_filename = argv[++i];
@@ -389,6 +389,12 @@ int main(int argc, char* argv[]) {
         config["template"] = template_path;
     }
     
+    if (!help_text.empty()) {
+        config["help_text"] = help_text;
+        config["help_link"] = help_link;
+        config["help_badge_url"] = help_badge_url;
+    }
+    
     config["createLabelsFromImages"] = createLabelsFromImages;
     
     // Adicionar listas extras de imagens
@@ -418,7 +424,7 @@ int main(int argc, char* argv[]) {
         }
     } catch (const std::exception& e) {
         tsimg::utils::errorLog(true, e.what());
-        display_info();
+        display_info(false);
         return 1;
     }
 }
