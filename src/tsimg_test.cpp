@@ -77,7 +77,7 @@ bool test_image_validation() {
     // Verificar que pelo menos uma imagem válida é validada corretamente
     bool anyValid = false;
     for (const auto& path : imagePaths) {
-        if (tsimg::utils::ImageValidator::validateImagePath(path, true)) {
+        if (tsimg::test::mocks::ImageValidator::validateImagePath(path, true)) {
             anyValid = true;
             break;
         }
@@ -85,7 +85,7 @@ bool test_image_validation() {
     
     // Verificar que um caminho inválido é rejeitado
     std::string invalidPath = "imagem_inexistente.jpg";
-    bool invalidRejected = !tsimg::utils::ImageValidator::validateImagePath(invalidPath, true);
+    bool invalidRejected = !tsimg::test::mocks::ImageValidator::validateImagePath(invalidPath, true);
     
     TSIMG_ASSERT(anyValid);
     TSIMG_ASSERT(invalidRejected);
@@ -101,7 +101,7 @@ bool test_base64_encoding() {
         return false;
     }
     
-    std::string base64 = encodeImageToBase64(imagePaths[0], true);
+    std::string base64 = mockEncodeImageToBase64(imagePaths[0], true);
     
     // Verificar que a codificação não está vazia
     TSIMG_ASSERT(!base64.empty());
@@ -212,7 +212,7 @@ bool test_gif_creation() {
     std::string outputPath = tsimg::test::TestUtils::createTempFilePath("test_gif", "gif");
     
     // Criar GIF
-    bool created = createGif(outputPath, imagePaths, true);
+    bool created = mockCreateGif(outputPath, imagePaths, true);
     
     // Verificar que o GIF foi criado
     bool exists = tsimg::test::TestUtils::fileExists(outputPath);
@@ -314,7 +314,7 @@ bool test_performance_base64_encoding() {
     auto start = std::chrono::high_resolution_clock::now();
     
     for (int i = 0; i < iterations; ++i) {
-        encodeImageToBase64(imagePaths[0], false);
+        mockEncodeImageToBase64(imagePaths[0], false);
     }
     
     auto end = std::chrono::high_resolution_clock::now();
@@ -339,7 +339,7 @@ bool test_performance_image_processing() {
     
     auto start = std::chrono::high_resolution_clock::now();
     
-    auto futures = tsimg::utils::ImageProcessor::processImagesAsync(imagePaths, false);
+    auto futures = tsimg::test::mocks::ImageProcessor::processImagesAsync(imagePaths, false);
     
     for (auto& future : futures) {
         future.get();
@@ -357,10 +357,16 @@ bool test_performance_image_processing() {
     return true;
 }
 
+// Declaração da função de registro de testes de falha
+void registerFailureTests();
+
 // Ponto de entrada principal para os testes
 int main(int argc, char* argv[]) {
     // Inicializar o executor de testes
     auto& runner = tsimg::test::TestRunner::getInstance();
+    
+    // Registrar testes de falha
+    registerFailureTests();
     
     // Adicionar testes unitários para funções de utilidade
     runner.addUnitTest("FileExists", test_file_exists);

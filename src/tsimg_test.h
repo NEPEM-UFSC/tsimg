@@ -1,108 +1,15 @@
 #ifndef TSIMG_TEST_H
 #define TSIMG_TEST_H
 
-#include <iostream>
-#include <string>
-#include <vector>
+#include "tsimg_test_framework.h"
 #include <memory>
-#include <filesystem>
-#include <fstream>
-#include <chrono>
-#include <functional>
 #include <map>
-#include <set>
-#include <cassert>
-#include <cstddef>
-#include <sstream>
+#include <vector>
+#include <string>
+#include <iostream>
+#include <fstream>
 #include <future>
 #include <thread>
-#include <algorithm>
-
-// Definições para testes
-
-// Asserts that 'condition' is true.
-// If 'condition' is false, prints an error message including the condition string,
-// file, and line number, then causes the current test function to 'return false'.
-#define TSIMG_ASSERT(condition) \
-    if (!(condition)) { \
-        std::cerr << "Assertion Failed: (" << #condition << ") is false in " << __FILE__ << ":" << __LINE__ << std::endl; \
-        return false; \
-    }
-
-// Asserts that 'expected' and 'actual' values are equal.
-// If they are not equal, prints an error message including the expressions for expected
-// and actual, their evaluated values, file, and line number, then causes the current
-// test function to 'return false'.
-#define TSIMG_ASSERT_EQ(expected, actual) \
-    if ((expected) != (actual)) { \
-        std::cerr << "Assertion Failed: Expected (" << #expected << ") to be equal to Actual (" << #actual \
-                  << "), but Expected was: " << (expected) << " and Actual was: " << (actual) \
-                  << " in " << __FILE__ << ":" << __LINE__ << std::endl; \
-        return false; \
-    }
-
-// Helper para TSIMG_ASSERT_THROWS e TSIMG_ASSERT_THROWS_ANY
-namespace tsimg {
-namespace test {
-template<typename Func, typename ExceptionType>
-bool check_throws_specific(Func func, const char* expr_str, const char* exception_type_str, const char* file, int line) {
-    try {
-        func();
-    } catch (const ExceptionType& e) {
-        // Opcional: std::cout << "Caught expected exception: " << e.what() << std::endl;
-        return true; // Teste passa
-    } catch (const std::exception& e) {
-        std::cerr << "Assertion Failed: Expected exception of type " << exception_type_str
-                  << " to be thrown by (" << expr_str << "), but a different std::exception was thrown: "
-                  << e.what() << " in " << file << ":" << line << std::endl;
-        return false; // Teste falha
-    } catch (...) {
-        std::cerr << "Assertion Failed: Expected exception of type " << exception_type_str
-                  << " to be thrown by (" << expr_str << "), but a non-standard exception was thrown in "
-                  << file << ":" << line << std::endl;
-        return false; // Teste falha
-    }
-    std::cerr << "Assertion Failed: Expected exception of type " << exception_type_str
-              << " not thrown by (" << expr_str << ") in " << file << ":" << line << std::endl;
-    return false; // Teste falha
-}
-
-template<typename Func>
-bool check_throws_any(Func func, const char* expr_str, const char* file, int line) {
-    try {
-        func();
-    } catch (const std::exception& e) {
-        // Opcional: std::cout << "Caught expected exception: " << e.what() << std::endl;
-        return true; // Teste passa
-    } catch (...) {
-        // Opcional: std::cout << "Caught expected non-standard exception." << std::endl;
-        return true; // Teste passa para qualquer exceção
-    }
-    std::cerr << "Assertion Failed: Expected any exception to be thrown by (" << expr_str 
-              << "), but no exception was thrown in " << file << ":" << line << std::endl;
-    return false; // Teste falha
-}
-} // namespace test
-} // namespace tsimg
-
-// Asserts that executing 'expression' throws an exception of type 'ExceptionType'.
-// If 'expression' executes without throwing an exception, or if it throws an exception
-// of a different type than 'ExceptionType', an error message is printed (including the
-// expression, expected exception type, file, and line number), and the current test
-// function 'return false'.
-#define TSIMG_ASSERT_THROWS(expression, ExceptionType) \
-    if (!tsimg::test::check_throws_specific([&]() { expression; }, #expression, #ExceptionType, __FILE__, __LINE__)) { \
-        return false; \
-    }
-
-// Asserts that executing 'expression' throws any type of exception.
-// If 'expression' executes without throwing any exception, an error message is printed
-// (including the expression, file, and line number), and the current test function
-// 'return false'.
-#define TSIMG_ASSERT_THROWS_ANY(expression) \
-    if (!tsimg::test::check_throws_any([&]() { expression; }, #expression, __FILE__, __LINE__)) { \
-        return false; \
-    }
 
 // Declaração antecipada de classes
 class VariableContent;
@@ -113,10 +20,10 @@ class SPICEBuilder;
 class TemplateWriter;
 
 // Função mock para codificação Base64
-std::string encodeImageToBase64(const std::string& imagePath, bool debug);
+std::string mockEncodeImageToBase64(const std::string& imagePath, bool debug);
 
 // Função mock para criação de GIF
-bool createGif(const std::string& output_filename, 
+bool mockCreateGif(const std::string& output_filename, 
                const std::vector<std::string>& image_paths, 
                bool debug, 
                int delay = 100, 
@@ -160,230 +67,55 @@ public:
 // Namespaces para testes
 namespace tsimg {
     namespace test {
-        
-        // Test functions are typically of the form 'bool my_test_function()' and should use the
-        // TSIMG_ASSERT_XXX macros for checks. A macro failure will 'return false' from the function.
-        // Returning 'true' indicates all assertions passed.
-
-        // Utilitários para testes
-        class TestUtils {
-        public:
-            static std::string createTempFilePath(const std::string& prefix, const std::string& extension) {
-                auto tempDir = std::filesystem::temp_directory_path();
-                auto tempFile = tempDir / (prefix + "_" + std::to_string(std::chrono::system_clock::now().time_since_epoch().count()) + "." + extension);
-                return tempFile.string();
-            }
-            
-            static bool removeFile(const std::string& filePath) {
-                try {
-                    return std::filesystem::remove(filePath);
-                } catch (const std::exception& e) {
-                    std::cerr << "Erro ao remover arquivo: " << e.what() << std::endl;
-                    return false;
-                }
-            }
-            
-            static bool fileExists(const std::string& filePath) {
-                return std::filesystem::exists(filePath);
-            }
-            
-            static std::vector<std::string> getTestImagePaths() {
-                // Procura imagens na pasta de testes ou no diretório atual
-                std::vector<std::string> imagePaths;
-                
-                try {
-                    // Busca primordialmente no diretório de teste/images
-                    std::vector<std::filesystem::path> searchPaths = {
-                        std::filesystem::current_path().parent_path() / "test" / "images",     // Caminho absoluto a partir do diretório build
-                        std::filesystem::current_path() / "test" / "images",                  // Caminho relativo a partir do diretório atual
-                        std::filesystem::current_path().parent_path() / "test" / "data",
-                        std::filesystem::current_path() / "test" / "data",
-                        std::filesystem::current_path().parent_path() / "data" / "test",
-                        std::filesystem::current_path().parent_path() / "example",
-                        std::filesystem::current_path().parent_path() / "_example",
-                        std::filesystem::current_path()
-                    };
+        namespace mocks {
+            // Mock da classe ImageValidator para testes
+            class ImageValidator {
+            public:
+                static bool validateImagePath(const std::string& path, bool debug) {
+                    if (debug) {
+                        std::cout << "Validando imagem: " << path << std::endl;
+                    }
                     
-                    for (const auto& searchPath : searchPaths) {
-                        if (!std::filesystem::exists(searchPath)) {
-                            std::cout << "Diretório não encontrado: " << searchPath.string() << std::endl;
-                            continue;
-                        }
-                        
-                        std::cout << "Buscando imagens em: " << searchPath.string() << std::endl;
-                        int count = 0;
-                        
-                        for (const auto& entry : std::filesystem::directory_iterator(searchPath)) {
-                            if (!entry.is_regular_file()) continue;
-                            
-                            std::string ext = entry.path().extension().string();
-                            std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
-                            
-                            if (ext == ".jpg" || ext == ".jpeg" || ext == ".png" || ext == ".bmp" || ext == ".gif") {
-                                imagePaths.push_back(entry.path().string());
-                                count++;
-                                std::cout << "Imagem encontrada: " << entry.path().string() << std::endl;
-                                if (count >= 5) break; // Limite de 5 imagens para não sobrecarregar os testes
+                    return std::filesystem::exists(path);
+                }
+            };
+            
+            // Mock da classe FileHandler para testes
+            class FileHandler {
+            public:
+                static bool isFileReadable(const std::string& path) {
+                    std::ifstream file(path);
+                    return file.good();
+                }
+            };
+            
+            // Mock da classe ImageProcessor para testes
+            class ImageProcessor {
+            public:
+                static std::vector<std::future<bool>> processImagesAsync(
+                    const std::vector<std::string>& imagePaths, bool debug) {
+                    std::vector<std::future<bool>> futures;
+                    
+                    for (const auto& path : imagePaths) {
+                        futures.push_back(std::async(std::launch::async, [path, debug]() {
+                            if (debug) {
+                                std::cout << "Processando imagem: " << path << std::endl;
                             }
-                        }
-                        
-                        if (!imagePaths.empty()) {
-                            std::cout << "Total de " << imagePaths.size() << " imagens encontradas." << std::endl;
-                            break;
-                        }
+                            // Simulação de processamento
+                            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                            return true;
+                        }));
                     }
-                } catch (const std::exception& e) {
-                    std::cerr << "Erro ao procurar imagens de teste: " << e.what() << std::endl;
+                    
+                    return futures;
                 }
-                
-                return imagePaths;
-            }
-        };
-        
-        // Executor de testes
-        class TestRunner {
-        private:
-            std::map<std::string, std::function<bool()>> tests;
-            std::map<std::string, std::string> testGroups;
-            
-            TestRunner() = default;
-            
-        public:
-            static TestRunner& getInstance() {
-                static TestRunner instance;
-                return instance;
-            }
-            
-            void addUnitTest(const std::string& name, std::function<bool()> testFunc) {
-                tests[name] = testFunc;
-                testGroups[name] = "unit";
-            }
-            
-            void addIntegrationTest(const std::string& name, std::function<bool()> testFunc) {
-                tests[name] = testFunc;
-                testGroups[name] = "integration";
-            }
-            
-            void addPerformanceTest(const std::string& name, std::function<bool()> testFunc) {
-                tests[name] = testFunc;
-                testGroups[name] = "performance";
-            }
-            
-            bool runTest(const std::string& name) {
-                if (tests.find(name) == tests.end()) {
-                    std::cerr << "Teste não encontrado: " << name << std::endl;
-                    return false;
-                }
-                
-                std::cout << "Executando teste: " << name << std::endl;
-                bool result = false;
-                
-                try {
-                    result = tests[name]();
-                } catch (const std::exception& e) {
-                    std::cerr << "Exceção no teste " << name << ": " << e.what() << std::endl;
-                    return false;
-                } catch (...) {
-                    std::cerr << "Exceção desconhecida no teste " << name << std::endl;
-                    return false;
-                }
-                
-                if (result) {
-                    std::cout << "PASSOU: " << name << std::endl;
-                } else {
-                    std::cerr << "FALHOU: " << name << std::endl;
-                }
-                
-                return result;
-            }
-            
-            void runAll() {
-                std::cout << "=== Executando todos os testes ===" << std::endl;
-                int passed = 0;
-                int total = 0;
-                
-                for (const auto& [name, _] : tests) {
-                    ++total;
-                    if (runTest(name)) {
-                        ++passed;
-                    }
-                }
-                
-                std::cout << "=== Resultado final: " << passed << "/" << total 
-                          << " testes passaram (" << (total > 0 ? (passed * 100 / total) : 0) 
-                          << "%) ===" << std::endl;
-            }
-            
-            void runGroup(const std::string& groupPattern) {
-                std::cout << "=== Executando testes do grupo: " << groupPattern << " ===" << std::endl;
-                int passed = 0;
-                int total = 0;
-                
-                for (const auto& [name, _] : tests) {
-                    if (name.find(groupPattern) != std::string::npos || 
-                        testGroups[name].find(groupPattern) != std::string::npos) {
-                        ++total;
-                        if (runTest(name)) {
-                            ++passed;
-                        }
-                    }
-                }
-                
-                std::cout << "=== Resultado do grupo " << groupPattern << ": " << passed << "/" 
-                          << total << " testes passaram (" << (total > 0 ? (passed * 100 / total) : 0) 
-                          << "%) ===" << std::endl;
-            }
-        };
+            };
+        } // namespace mocks
     } // namespace test
-    
-    namespace utils {
-        // Mock da classe ImageValidator para testes
-        class ImageValidator {
-        public:
-            static bool validateImagePath(const std::string& path, bool debug) {
-                if (debug) {
-                    std::cout << "Validando imagem: " << path << std::endl;
-                }
-                
-                return std::filesystem::exists(path);
-            }
-        };
-        
-        // Mock da classe FileHandler para testes
-        class FileHandler {
-        public:
-            static bool isFileReadable(const std::string& path) {
-                std::ifstream file(path);
-                return file.good();
-            }
-        };
-        
-        // Mock da classe ImageProcessor para testes
-        class ImageProcessor {
-        public:
-            static std::vector<std::future<bool>> processImagesAsync(
-                const std::vector<std::string>& imagePaths, bool debug) {
-                std::vector<std::future<bool>> futures;
-                
-                for (const auto& path : imagePaths) {
-                    futures.push_back(std::async(std::launch::async, [path, debug]() {
-                        if (debug) {
-                            std::cout << "Processando imagem: " << path << std::endl;
-                        }
-                        // Simulação de processamento
-                        std::this_thread::sleep_for(std::chrono::milliseconds(100));
-                        return true;
-                    }));
-                }
-                
-                return futures;
-            }
-        };
-    } // namespace utils
 } // namespace tsimg
 
 // Função mock para criação de GIF - implementação
-inline bool createGif(const std::string& output_filename, 
+inline bool mockCreateGif(const std::string& output_filename, 
                      const std::vector<std::string>& image_paths, 
                      bool debug, 
                      int delay, 
@@ -413,7 +145,7 @@ inline bool createGif(const std::string& output_filename,
 }
 
 // Função mock para codificação Base64 - implementação
-inline std::string encodeImageToBase64(const std::string& imagePath, bool debug) {
+inline std::string mockEncodeImageToBase64(const std::string& imagePath, bool debug) {
     if (debug) {
         std::cout << "Codificando imagem em Base64: " << imagePath << std::endl;
     }
@@ -500,7 +232,7 @@ public:
     }
     
     void setAuthorImage(const std::string& imagePath) {
-        authorImageBase64 = encodeImageToBase64(imagePath, debug);
+        authorImageBase64 = mockEncodeImageToBase64(imagePath, debug);
     }
     
     void setTemplate(const std::string& path) {
@@ -617,7 +349,7 @@ bool test_file_exists() {
     }
     
     // Verificar que o arquivo existe
-    bool exists = tsimg::utils::FileHandler::isFileReadable(testFilePath);
+    bool exists = tsimg::test::mocks::FileHandler::isFileReadable(testFilePath);
     
     // Limpar
     tsimg::test::TestUtils::removeFile(testFilePath);
